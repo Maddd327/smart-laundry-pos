@@ -3,7 +3,7 @@
 // (and no homepage-only JSON-LD). The SPA rewrite in vercel.json otherwise
 // serves the exact same index.html for every route, so a crawler that doesn't
 // execute JS (many AI/answer-engine bots) would see the homepage's title,
-// description, canonical, and FAQPage schema on /login and /install too -
+// description, canonical, and homepage schema on /login too -
 // telling Google those routes are duplicates of "/" and misrepresenting what's
 // on those pages to answer engines. React still hydrates and renders normally
 // client-side; only the pre-hydration HTML in <head> differs per route.
@@ -20,13 +20,7 @@ const ROUTES = [
     path: '/login',
     title: 'Login - Smart Laundry POS',
     description:
-      'Masuk atau daftar sebagai pemilik toko laundry di Smart Laundry POS. Gratis dipakai, tanpa kartu kredit, siap pakai dalam 5 menit.',
-  },
-  {
-    path: '/install',
-    title: 'Cara Install Aplikasi Smart Laundry POS - Android, iOS, Desktop',
-    description:
-      'Panduan instal Smart Laundry POS sebagai aplikasi (PWA) di Android, iOS, Windows, dan Mac. Akses offline dan tampilan seperti aplikasi native langsung dari layar utama.',
+      'Masuk ke dashboard pengelola laundry untuk mencatat pesanan, pelanggan, pembayaran, dan laporan outlet.',
   },
 ];
 

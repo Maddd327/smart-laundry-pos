@@ -45,7 +45,7 @@ There is no test suite configured. Test changes by:
 - **Backend**: Supabase (PostgreSQL + Real-time subscriptions)
 - **State Management**: React Query (@tanstack/react-query) + Context API
 - **Authentication**: Custom auth service using Supabase (localStorage-based sessions)
-- **PWA**: Service Worker + Web App Manifest (offline support)
+- **Browser offline support**: Service worker for static resources and IndexedDB for queued POS orders
 - **Routing**: React Router v6
 
 ### Multi-Tenant Architecture
@@ -102,28 +102,27 @@ src/
 │   ├── ui/              # shadcn/ui components (DO NOT modify unless necessary)
 │   ├── pos/             # POS-specific components (service selectors, order dialogs)
 │   ├── orders/          # Order management components (virtualized lists, payment cards)
-│   ├── dashboard/       # Dashboard widgets and cards
+│   ├── laundry/         # Public laundry wordmark and order form
 │   ├── stores/          # Store management (staff assignments, settings)
 │   ├── auth/            # Auth components (ProtectedRoute, OwnerRoute)
-│   ├── layout/          # Layout components (AppLayout, AppHeader)
+│   ├── layout/          # Layout components (AppLayout, AppSidebar, MobileBottomNav)
 │   ├── thermal/         # Thermal printer components
-│   └── settings/        # Settings components (WhatsApp configuration)
 ├── contexts/            # React Context providers (Auth, Store, ThermalPrinter)
 ├── hooks/               # Custom React hooks
-│   ├── useOrders.ts           # Order operations with WhatsApp notifications
+│   ├── useOrdersWithNotifications.ts # Order mutations with WhatsApp notifications
 │   ├── useOrdersOptimized.ts  # Optimized order fetching with pagination
 │   ├── useCustomers.ts        # Customer CRUD operations
 │   ├── useServices.ts         # Service management
 │   └── useDashboard.ts        # Dashboard metrics
 ├── integrations/
-│   ├── supabase/        # Supabase client and types (auto-generated types.ts)
+│   ├── supabase/        # Supabase browser client
 │   └── whatsapp/        # WhatsApp integration (client, service, templates)
 ├── lib/                 # Utility libraries (utils, queryClient, printUtils)
 ├── pages/               # Route components (HomePage, OrderHistory, ServiceManagement, etc.)
 ├── services/            # Business logic services (authService)
 ├── types/               # TypeScript type definitions (multi-tenant types)
 ├── App.tsx              # Main app with route definitions
-└── main.tsx             # Entry point with PWA service worker registration
+└── main.tsx             # Entry point with production browser offline support
 ```
 
 ### Critical Integration Points
@@ -143,7 +142,7 @@ src/
 
 **Supabase Integration**:
 - Client configured in `src/integrations/supabase/client.ts` (DO NOT MODIFY)
-- Database types auto-generated in `src/integrations/supabase/types.ts`
+- Domain interfaces are defined alongside the hooks and components that use them.
 - Custom RPC functions:
   - `create_user(user_email, user_password, user_full_name, user_phone, user_role)`
   - `calculate_order_points(order_id_param)` - calculates points from order items
@@ -161,7 +160,6 @@ src/
 - `/` - Landing page (SmartHomePage)
 - `/login` - Authentication
 - `/receipt/:orderId` - Public receipt view (no auth required)
-- `/install` - PWA installation guide
 
 **Protected Routes** (requires authentication):
 - `/home` - Main dashboard (HomePage)
@@ -177,7 +175,7 @@ src/
 **Protection Components**:
 - `<ProtectedRoute>`: Redirects to `/login` if not authenticated
 - `<OwnerRoute>`: Shows error if user is not owner of current store
-- `<ProtectedRedirect>`: Catch-all that redirects to appropriate page based on auth state
+- `<NotFound>`: Catch-all showing a public 404 with a working return link
 
 ### Service Types System
 
@@ -198,14 +196,14 @@ The application supports three service types defined in the database:
    - Pricing: `(price_per_kg × weight_kg) + (price_per_unit × quantity)`
    - Points: (KG rounded) + quantity
 
-### PWA Features
+### Browser Offline Support
 
 - Service worker registered in `src/main.tsx`
-- Manifest located at `public/manifest.json`
 - Service worker script at `public/sw.js`
 - Offline support with intelligent caching
-- Install prompts handled by `usePWAInstall` hook
-- PWA diagnostics available at `/install` route
+- No application manifest or installation prompts
+- Public storefront uses `src/lib/laundrySite.ts` and `usePublicLaundry`
+- Customer forms prepare a WhatsApp request, not a confirmed POS transaction
 
 ### State Management Patterns
 
@@ -242,10 +240,10 @@ The application supports three service types defined in the database:
      }
    />
    ```
-3. Update navigation in `src/components/layout/AppHeader.tsx` if needed
+3. Update navigation in `src/components/layout/AppSidebar.tsx` and `src/hooks/useMobileBottomNavItems.ts` if needed
 
 ### Working with Orders
-- Use `useOrders` or `useOrdersOptimized` hook
+- Use `useOrders` from `useOrdersOptimized` for reads and `useOrdersWithNotifications` for mutations
 - Always pass `currentStore?.store_id` to ensure store isolation
 - Update both `execution_status` and `payment_status` as needed
 - After creating/updating orders, invalidate queries: `['orders', store_id]`
@@ -291,12 +289,11 @@ The application supports three service types defined in the database:
 2. Include RLS policies appropriate for multi-tenant isolation
 3. Add `store_id UUID REFERENCES stores(id)` for tenant scoping
 4. Create indexes for `store_id` and frequently queried columns
-5. Update `src/integrations/supabase/types.ts` (may require re-generation)
+5. Update the interfaces used by the affected hooks and components.
 
-### Modifying Supabase Types
-- Types are auto-generated in `src/integrations/supabase/types.ts`
-- DO NOT manually edit this file
-- Regenerate after schema changes (process TBD - check Supabase docs)
+### Modifying Database Types
+- Keep the interfaces in the affected hooks and components aligned with the schema.
+- If generated database types are introduced later, regenerate them after schema changes.
 
 ## Important Constraints
 
@@ -372,12 +369,12 @@ COMMENT ON COLUMN public.table_name.new_column IS 'Description of purpose';
 3. Check for TypeScript errors: `npm run lint`
 4. Try clean start: kill dev server, clear browser cache, restart
 
-### PWA Not Working
+### Browser Offline Support Not Working
 1. Check service worker registration in browser DevTools → Application
 2. Verify `public/sw.js` is valid JavaScript
-3. Verify `public/manifest.json` is valid JSON
-4. HTTPS required in production for PWA features
-5. Clear browser application storage and reload
+3. HTTPS is required in production for service workers and Web Bluetooth
+4. Development does not register a service worker, to keep Vite updates visible
+5. Do not clear IndexedDB while it contains unsynced POS orders
 
 ### Store Context Issues
 1. Check user is authenticated: verify in AuthContext

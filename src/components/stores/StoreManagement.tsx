@@ -1,7 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { Building2, Users, TrendingUp, Package } from 'lucide-react';
+import { Building2, Users, Package } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { CreateStoreDialog } from './CreateStoreDialog';
 import { StoreDetailsCard } from './StoreDetailsCard';

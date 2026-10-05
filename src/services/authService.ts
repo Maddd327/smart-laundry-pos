@@ -96,7 +96,7 @@ class AuthService {
       if (role === 'laundry_owner' && storeData && storeData.name) {
         try {
           // createStoreForUser RPC will set stores.owner_id = userData.id
-          const newStoreId = await this.createStoreForUser(userData.id, storeData);
+          await this.createStoreForUser(userData.id, storeData);
           // Do NOT update users.store_id for owners - keep it null per multi-tenant design
         } catch (storeError) {
           // If store creation fails, remove the created user record to avoid orphan

@@ -1,38 +1,6 @@
-import { Capacitor, CapacitorHttp } from '@capacitor/core';
 import { WhatsAppConfig, WhatsAppMessage, WhatsAppResponse } from './types';
 
-// On native platforms, an absolute cross-origin fetch() from the WebView's
-// `https://localhost` origin to the deployed API domain is a real browser CORS
-// request - and "Failed to fetch" is the generic error a WebView throws for it
-// with no further detail, regardless of whether the server's CORS headers are
-// actually correct. Native HTTP requests aren't subject to same-origin/CORS at
-// all, so routing through Capacitor's native bridge sidesteps the whole class
-// of WebView-network quirks. Falls back to a JSON-parsed body the same way the
-// web fetch path does, since the WhatsApp API doesn't always set a JSON
-// Content-Type on its response.
-const parseNativeBody = (data: unknown): WhatsAppResponse => {
-  if (data && typeof data === 'object') {
-    return data as WhatsAppResponse;
-  }
-  if (typeof data === 'string') {
-    try {
-      return JSON.parse(data);
-    } catch {
-      return { success: true, message: 'Message sent successfully', id: 'unknown' };
-    }
-  }
-  return { success: true, message: 'Message sent successfully', id: 'unknown' };
-};
-
-// baseUrl is a same-origin relative path ('/api/whatsapp-send') on the web
-// deployment, but an absolute URL ('https://.../api/whatsapp-send') on native
-// builds, which bake in VITE_APP_ORIGIN (see whatsapp-config.ts) since the
-// packaged app's WebView has no same-origin backend to resolve a relative
-// path against. Resolving against a dummy base handles both forms uniformly
-// (the base is ignored when baseUrl is already absolute) and normalizes dot
-// segments. Compares the pathname exactly (not a prefix) so it doesn't
-// false-match '/api/whatsapp-sender', '/api/whatsapp-send-message', a
-// sub-path, or the local dev proxy's distinct '/api/whatsapp' base URL.
+// Match the serverless route exactly so sender registration is not mistaken for sending.
 const isVercelFunctionUrl = (baseUrl: string): boolean => {
   let pathname: string;
   try {
@@ -108,23 +76,6 @@ export class WhatsAppClient {
       // Include from field if provided (multi-sender support)
       if (message.from) {
         requestBody.from = message.from;
-      }
-
-      if (Capacitor.isNativePlatform()) {
-        const response = await CapacitorHttp.post({
-          url: endpoint,
-          headers,
-          data: requestBody,
-          connectTimeout: this.config.timeout,
-          readTimeout: this.config.timeout,
-        });
-
-        if (response.status < 200 || response.status >= 300) {
-          const errorText = typeof response.data === 'string' ? response.data : JSON.stringify(response.data);
-          throw new Error(`HTTP ${response.status}: ${errorText}`);
-        }
-
-        return parseNativeBody(response.data);
       }
 
       const controller = new AbortController();
@@ -220,19 +171,6 @@ export class WhatsAppClient {
       const testBody = JSON.stringify({ ...testMessage, message: '' }); // Empty message to test auth
 
       // Don't actually send the test message, just test the API endpoint
-      if (Capacitor.isNativePlatform()) {
-        const response = await CapacitorHttp.post({
-          url: endpoint,
-          headers,
-          data: { ...testMessage, message: '' },
-          connectTimeout: 5000,
-          readTimeout: 5000,
-        });
-
-        // Even if it returns an error for empty message, 401 means auth failed
-        return response.status !== 401;
-      }
-
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), 5000);
 

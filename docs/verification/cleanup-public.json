@@ -1,0 +1,77 @@
+[
+  {
+    "name": "Web only landing",
+    "status": "PASS",
+    "evidence": "One H1, three source services, no manifest or application download UI."
+  },
+  {
+    "name": "Responsive layout",
+    "status": "PASS",
+    "evidence": "No horizontal overflow or broken images at 320, 375, 390, 768, 1024, and 1440 px."
+  },
+  {
+    "name": "Mobile menu",
+    "status": "PASS",
+    "evidence": "Opens, closes with Escape, restores focus, closes after section navigation."
+  },
+  {
+    "name": "Anchor links",
+    "status": "PASS",
+    "evidence": "Every visible hero, header, section, skip, footer, pickup, and top link targets an existing section."
+  },
+  {
+    "name": "Service CTAs",
+    "status": "PASS",
+    "evidence": "Each service selects the matching form option and focuses the service field."
+  },
+  {
+    "name": "Order validation and pricing",
+    "status": "PASS",
+    "evidence": "Empty form and missing pickup address prevent submission; 2.5 kg=Rp15.000, 2 items=Rp36.000, fractional item invalid. Complete form shows request summary and active owner contact."
+  },
+  {
+    "name": "WhatsApp handoff and copy",
+    "status": "PASS",
+    "evidence": "Correct normalized owner number, encoded details, clipboard success, and stale summary invalidation. External WA requests intercepted; no message sent."
+  },
+  {
+    "name": "FAQ",
+    "status": "PASS",
+    "evidence": "All six accordions open and close."
+  },
+  {
+    "name": "Contact and review links",
+    "status": "PASS",
+    "evidence": "5 visible floating, help, review, contact and footer WhatsApp links open the configured contact."
+  },
+  {
+    "name": "Accessibility",
+    "status": "PASS",
+    "evidence": "Axe WCAG A/AA scan: no violations on public desktop page."
+  },
+  {
+    "name": "Keyboard skip",
+    "status": "PASS",
+    "evidence": "Tab focuses visible skip link; Enter navigates to main."
+  },
+  {
+    "name": "Login page",
+    "status": "PASS",
+    "evidence": "Staff link opens existing login, signup/login tabs work, password visibility toggle works, back link returns to storefront."
+  },
+  {
+    "name": "Protected routes",
+    "status": "PASS",
+    "evidence": "All nine operational routes still require authentication."
+  },
+  {
+    "name": "Removed installation route",
+    "status": "PASS",
+    "evidence": "Removed path shows real 404 with working return link."
+  },
+  {
+    "name": "Browser runtime",
+    "status": "PASS",
+    "evidence": "No page exceptions or console errors during the tested flow."
+  }
+]

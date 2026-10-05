@@ -16,7 +16,7 @@ export const StoreSelector: React.FC = () => {
   const { currentStore, userStores, switchStore } = useStore();
   const [isOpen, setIsOpen] = useState(false);
 
-  const handleStoreSwitch = useCallback((storeId: string, storeName: string) => {
+  const handleStoreSwitch = useCallback((storeId: string) => {
     
     // Close the dropdown first
     setIsOpen(false);
@@ -58,7 +58,7 @@ export const StoreSelector: React.FC = () => {
           <DropdownMenuItem
             key={store.store_id}
             onSelect={() => {
-              handleStoreSwitch(store.store_id, store.store_name);
+              handleStoreSwitch(store.store_id);
             }}
             className="flex items-center justify-between cursor-pointer"
           >

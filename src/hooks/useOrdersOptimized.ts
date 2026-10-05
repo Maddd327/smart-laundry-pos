@@ -99,20 +99,6 @@ export const useOrdersInfinite = (filters?: OrderFilters) => {
         const to = from + PAGE_SIZE - 1;
 
 
-        // First, try a simple query without joins to test basic connectivity
-        const { data: testData, error: testError } = await supabase
-          .from('orders')
-          .select('id, customer_name, customer_phone, created_at')
-          .eq('store_id', currentStore.store_id)
-          .limit(1);
-
-
-        if (testError) {
-          console.error('Test query failed:', testError);
-          throw testError;
-        }
-
-        // If test query works, proceed with full query
         let query = supabase
           .from('orders')
           .select(`

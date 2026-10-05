@@ -10,7 +10,7 @@ interface ProtectedRouteProps {
 
 export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children }) => {
   const { user, loading: authLoading } = useAuth();
-  const { currentStore, userStores, loading: storeLoading } = useStore();
+  const { userStores, loading: storeLoading } = useStore();
   const location = useLocation();
 
   // Show loading if either auth or store is loading

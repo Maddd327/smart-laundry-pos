@@ -2,7 +2,6 @@ import React from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useStore } from '@/contexts/StoreContext';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { Capacitor } from '@capacitor/core';
 import {
   LogOut,
   History,
@@ -12,7 +11,6 @@ import {
   Building2,
   Wrench,
   Plus,
-  Smartphone,
   Users,
   MessageSquare,
   TrendingUp,
@@ -50,6 +48,7 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { AddCustomerDialog } from '@/components/pos/AddCustomerDialog';
 import { ChangePasswordDialog } from '@/components/auth/ChangePasswordDialog';
+import { laundrySite } from '@/lib/laundrySite';
 
 // Constants for display truncation
 const USER_INITIALS_MAX_LENGTH = 2;
@@ -151,8 +150,8 @@ export const AppSidebar: React.FC = () => {
             <span className="text-white font-bold text-sm">SL</span>
           </div>
           <div className="flex-1 min-w-0">
-            <h1 className="text-base font-semibold text-gray-900 truncate">Smart Laundry</h1>
-            <p className="text-xs text-muted-foreground truncate">Point of Sale</p>
+            <p className="text-base font-semibold text-foreground truncate">{laundrySite.name}</p>
+            <p className="text-xs text-muted-foreground truncate">Pengelola outlet</p>
           </div>
         </div>
       </SidebarHeader>
@@ -240,18 +239,6 @@ export const AppSidebar: React.FC = () => {
           <SidebarGroupLabel>Pengaturan</SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
-              {!Capacitor.isNativePlatform() && (
-                <SidebarMenuItem>
-                  <SidebarMenuButton
-                    onClick={() => handleNavigation('/install')}
-                    isActive={location.pathname === '/install'}
-                    tooltip="Install Aplikasi"
-                  >
-                    <Smartphone className="h-4 w-4" />
-                    <span>Install Aplikasi</span>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-              )}
               <SidebarMenuItem>
                 <ChangePasswordDialog
                   trigger={

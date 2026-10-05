@@ -1,18 +1,29 @@
-import React, { useState } from 'react';
-import { Navigate, useLocation, useSearchParams } from 'react-router-dom';
-import { useAuth } from '@/contexts/AuthContext';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
-import { Loader2, Eye, EyeOff, ChevronDown } from 'lucide-react';
-import { useForm } from 'react-hook-form';
-import { usePageTitle } from '@/hooks/usePageTitle';
-import { usePageMeta } from '@/hooks/usePageMeta';
-import { PageLoading } from '@/components/ui/loading-spinner';
-import { GoogleLoginButton } from '@/components/auth/GoogleLoginButton';
+import React, { useState } from "react";
+import { Link, Navigate, useLocation, useSearchParams } from "react-router-dom";
+import { useAuth } from "@/contexts/AuthContext";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardFooter,
+  CardHeader,
+} from "@/components/ui/card";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from "@/components/ui/collapsible";
+import { Loader2, Eye, EyeOff, ChevronDown } from "lucide-react";
+import { useForm } from "react-hook-form";
+import { usePageTitle } from "@/hooks/usePageTitle";
+import { usePageMeta } from "@/hooks/usePageMeta";
+import { PageLoading } from "@/components/ui/loading-spinner";
+import { GoogleLoginButton } from "@/components/auth/GoogleLoginButton";
+import { laundrySite } from "@/lib/laundrySite";
 
 interface LoginForm {
   email: string;
@@ -31,17 +42,17 @@ export const Login: React.FC = () => {
   const { user, loading, signIn, signUp } = useAuth();
   const location = useLocation();
   const [searchParams] = useSearchParams();
-  const defaultTab = searchParams.get('tab') === 'signup' ? 'signup' : 'login';
+  const defaultTab = searchParams.get("tab") === "signup" ? "signup" : "login";
   const [isLoading, setIsLoading] = useState(false);
   const [showLoginPassword, setShowLoginPassword] = useState(false);
   const [showSignupPassword, setShowSignupPassword] = useState(false);
   const [showStoreDetails, setShowStoreDetails] = useState(false);
 
-  usePageTitle('Login');
+  usePageTitle("Login");
   usePageMeta({
     description:
-      'Masuk atau daftar sebagai pemilik toko laundry di Smart Laundry POS. Gratis dipakai, tanpa kartu kredit, siap pakai dalam 5 menit.',
-    path: '/login',
+      "Masuk ke dashboard pengelola laundry untuk mencatat pesanan, pelanggan, pembayaran, dan laporan outlet.",
+    path: "/login",
   });
 
   const loginForm = useForm<LoginForm>();
@@ -49,7 +60,7 @@ export const Login: React.FC = () => {
 
   // Redirect if already authenticated
   if (user) {
-    const from = location.state?.from?.pathname || '/home';
+    const from = location.state?.from?.pathname || "/home";
     return <Navigate to={from} replace />;
   }
 
@@ -67,13 +78,20 @@ export const Login: React.FC = () => {
   const handleSignUp = async (data: SignUpForm) => {
     try {
       setIsLoading(true);
-      const role = 'laundry_owner';
+      const role = "laundry_owner";
       const storeData = {
         name: data.storeName,
         address: data.storeAddress || undefined,
-        phone: data.storePhone || undefined
+        phone: data.storePhone || undefined,
       };
-      await signUp(data.email, data.password, data.fullName, data.phone, role, storeData);
+      await signUp(
+        data.email,
+        data.password,
+        data.fullName,
+        data.phone,
+        role,
+        storeData,
+      );
     } catch (error) {
       // Error is handled in the auth context
     } finally {
@@ -86,11 +104,29 @@ export const Login: React.FC = () => {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-background px-4">
-      <Card className="w-full max-w-md">
+    <main className="min-h-screen flex flex-col items-center justify-center gap-8 bg-secondary px-5 py-10 lg:flex-row lg:gap-20">
+      <aside className="hidden max-w-sm lg:block">
+        <Link to="/" className="text-sm font-semibold text-primary">
+          Kembali ke website {laundrySite.name}
+        </Link>
+        <p className="mt-8 text-5xl font-bold leading-tight tracking-tight text-foreground">
+          Selamat datang
+          <br />
+          di balik
+          <br />
+          layanan Anda.
+        </p>
+        <p className="mt-6 leading-relaxed text-muted-foreground">
+          Satu tempat untuk mengelola pesanan, merawat hubungan dengan
+          pelanggan, dan memantau aktivitas outlet.
+        </p>
+      </aside>
+      <Card className="w-full max-w-md rounded-2xl border-border shadow-soft">
         <CardHeader className="text-center">
-          <CardTitle className="text-2xl font-bold">Smart Laundry POS</CardTitle>
-          <CardDescription>Masuk ke akun Anda atau daftar sebagai pemilik toko</CardDescription>
+          <h1 className="text-2xl font-bold">Dashboard Pengelola</h1>
+          <CardDescription>
+            Masuk ke akun Anda atau daftar sebagai pemilik toko
+          </CardDescription>
         </CardHeader>
         <CardContent>
           <Tabs defaultValue={defaultTab} className="w-full">
@@ -98,25 +134,30 @@ export const Login: React.FC = () => {
               <TabsTrigger value="login">Masuk</TabsTrigger>
               <TabsTrigger value="signup">Daftar</TabsTrigger>
             </TabsList>
-            
+
             <TabsContent value="login">
-              <form onSubmit={loginForm.handleSubmit(handleLogin)} className="space-y-4">
+              <form
+                onSubmit={loginForm.handleSubmit(handleLogin)}
+                className="space-y-4"
+              >
                 <div className="space-y-2">
                   <Label htmlFor="login-email">Email</Label>
                   <Input
                     id="login-email"
                     type="email"
                     placeholder="Masukkan email Anda"
-                    {...loginForm.register('email', {
-                      required: 'Email wajib diisi',
+                    {...loginForm.register("email", {
+                      required: "Email wajib diisi",
                       pattern: {
                         value: /^[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}$/i,
-                        message: 'Alamat email tidak valid'
-                      }
+                        message: "Alamat email tidak valid",
+                      },
                     })}
                   />
                   {loginForm.formState.errors.email && (
-                    <p className="text-sm text-destructive">{loginForm.formState.errors.email.message}</p>
+                    <p className="text-sm text-destructive">
+                      {loginForm.formState.errors.email.message}
+                    </p>
                   )}
                 </div>
 
@@ -128,12 +169,12 @@ export const Login: React.FC = () => {
                       type={showLoginPassword ? "text" : "password"}
                       placeholder="Masukkan kata sandi Anda"
                       className="pr-10"
-                      {...loginForm.register('password', {
-                        required: 'Kata sandi wajib diisi',
+                      {...loginForm.register("password", {
+                        required: "Kata sandi wajib diisi",
                         minLength: {
                           value: 6,
-                          message: 'Kata sandi minimal 6 karakter'
-                        }
+                          message: "Kata sandi minimal 6 karakter",
+                        },
                       })}
                     />
                     <Button
@@ -142,6 +183,12 @@ export const Login: React.FC = () => {
                       size="sm"
                       className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent"
                       onClick={() => setShowLoginPassword(!showLoginPassword)}
+                      aria-label={
+                        showLoginPassword
+                          ? "Sembunyikan kata sandi"
+                          : "Tampilkan kata sandi"
+                      }
+                      aria-pressed={showLoginPassword}
                     >
                       {showLoginPassword ? (
                         <EyeOff className="h-4 w-4 text-muted-foreground" />
@@ -151,35 +198,40 @@ export const Login: React.FC = () => {
                     </Button>
                   </div>
                   {loginForm.formState.errors.password && (
-                    <p className="text-sm text-destructive">{loginForm.formState.errors.password.message}</p>
+                    <p className="text-sm text-destructive">
+                      {loginForm.formState.errors.password.message}
+                    </p>
                   )}
                 </div>
 
-                <Button
-                  type="submit"
-                  className="w-full"
-                  disabled={isLoading}
-                >
-                  {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                <Button type="submit" className="w-full" disabled={isLoading}>
+                  {isLoading && (
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  )}
                   Masuk
                 </Button>
               </form>
             </TabsContent>
-            
+
             <TabsContent value="signup">
-              <form onSubmit={signUpForm.handleSubmit(handleSignUp)} className="space-y-4">
+              <form
+                onSubmit={signUpForm.handleSubmit(handleSignUp)}
+                className="space-y-4"
+              >
                 <div className="space-y-2">
                   <Label htmlFor="signup-fullname">Nama Lengkap</Label>
                   <Input
                     id="signup-fullname"
                     type="text"
                     placeholder="Masukkan nama lengkap Anda"
-                    {...signUpForm.register('fullName', {
-                      required: 'Nama lengkap wajib diisi'
+                    {...signUpForm.register("fullName", {
+                      required: "Nama lengkap wajib diisi",
                     })}
                   />
                   {signUpForm.formState.errors.fullName && (
-                    <p className="text-sm text-destructive">{signUpForm.formState.errors.fullName.message}</p>
+                    <p className="text-sm text-destructive">
+                      {signUpForm.formState.errors.fullName.message}
+                    </p>
                   )}
                 </div>
 
@@ -189,16 +241,18 @@ export const Login: React.FC = () => {
                     id="signup-email"
                     type="email"
                     placeholder="Masukkan email Anda"
-                    {...signUpForm.register('email', {
-                      required: 'Email wajib diisi',
+                    {...signUpForm.register("email", {
+                      required: "Email wajib diisi",
                       pattern: {
                         value: /^[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}$/i,
-                        message: 'Alamat email tidak valid'
-                      }
+                        message: "Alamat email tidak valid",
+                      },
                     })}
                   />
                   {signUpForm.formState.errors.email && (
-                    <p className="text-sm text-destructive">{signUpForm.formState.errors.email.message}</p>
+                    <p className="text-sm text-destructive">
+                      {signUpForm.formState.errors.email.message}
+                    </p>
                   )}
                 </div>
 
@@ -208,15 +262,17 @@ export const Login: React.FC = () => {
                     id="signup-phone"
                     type="tel"
                     placeholder="Masukkan nomor telepon Anda"
-                    {...signUpForm.register('phone', {
-                      required: 'Nomor telepon wajib diisi'
+                    {...signUpForm.register("phone", {
+                      required: "Nomor telepon wajib diisi",
                     })}
                   />
                   {signUpForm.formState.errors.phone && (
-                    <p className="text-sm text-destructive">{signUpForm.formState.errors.phone.message}</p>
+                    <p className="text-sm text-destructive">
+                      {signUpForm.formState.errors.phone.message}
+                    </p>
                   )}
                 </div>
-                
+
                 <div className="space-y-2">
                   <Label htmlFor="signup-password">Kata Sandi</Label>
                   <div className="relative">
@@ -225,12 +281,12 @@ export const Login: React.FC = () => {
                       type={showSignupPassword ? "text" : "password"}
                       placeholder="Buat kata sandi"
                       className="pr-10"
-                      {...signUpForm.register('password', {
-                        required: 'Kata sandi wajib diisi',
+                      {...signUpForm.register("password", {
+                        required: "Kata sandi wajib diisi",
                         minLength: {
                           value: 6,
-                          message: 'Kata sandi minimal 6 karakter'
-                        }
+                          message: "Kata sandi minimal 6 karakter",
+                        },
                       })}
                     />
                     <Button
@@ -239,6 +295,12 @@ export const Login: React.FC = () => {
                       size="sm"
                       className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent"
                       onClick={() => setShowSignupPassword(!showSignupPassword)}
+                      aria-label={
+                        showSignupPassword
+                          ? "Sembunyikan kata sandi"
+                          : "Tampilkan kata sandi"
+                      }
+                      aria-pressed={showSignupPassword}
                     >
                       {showSignupPassword ? (
                         <EyeOff className="h-4 w-4 text-muted-foreground" />
@@ -248,7 +310,9 @@ export const Login: React.FC = () => {
                     </Button>
                   </div>
                   {signUpForm.formState.errors.password && (
-                    <p className="text-sm text-destructive">{signUpForm.formState.errors.password.message}</p>
+                    <p className="text-sm text-destructive">
+                      {signUpForm.formState.errors.password.message}
+                    </p>
                   )}
                 </div>
 
@@ -258,16 +322,21 @@ export const Login: React.FC = () => {
                     id="signup-store-name"
                     type="text"
                     placeholder="Masukkan nama toko Anda"
-                    {...signUpForm.register('storeName', {
-                      required: 'Nama toko wajib diisi'
+                    {...signUpForm.register("storeName", {
+                      required: "Nama toko wajib diisi",
                     })}
                   />
                   {signUpForm.formState.errors.storeName && (
-                    <p className="text-sm text-destructive">{signUpForm.formState.errors.storeName.message}</p>
+                    <p className="text-sm text-destructive">
+                      {signUpForm.formState.errors.storeName.message}
+                    </p>
                   )}
                 </div>
 
-                <Collapsible open={showStoreDetails} onOpenChange={setShowStoreDetails}>
+                <Collapsible
+                  open={showStoreDetails}
+                  onOpenChange={setShowStoreDetails}
+                >
                   <CollapsibleTrigger asChild>
                     <button
                       type="button"
@@ -275,7 +344,7 @@ export const Login: React.FC = () => {
                     >
                       <span>Detail toko (opsional)</span>
                       <ChevronDown
-                        className={`h-4 w-4 transition-transform duration-200 ${showStoreDetails ? 'rotate-180' : ''}`}
+                        className={`h-4 w-4 transition-transform duration-200 ${showStoreDetails ? "rotate-180" : ""}`}
                       />
                     </button>
                   </CollapsibleTrigger>
@@ -286,17 +355,19 @@ export const Login: React.FC = () => {
                         id="signup-store-address"
                         type="text"
                         placeholder="Masukkan alamat toko Anda (opsional)"
-                        {...signUpForm.register('storeAddress')}
+                        {...signUpForm.register("storeAddress")}
                       />
                     </div>
 
                     <div className="space-y-2">
-                      <Label htmlFor="signup-store-phone">Nomor Telepon Toko</Label>
+                      <Label htmlFor="signup-store-phone">
+                        Nomor Telepon Toko
+                      </Label>
                       <Input
                         id="signup-store-phone"
                         type="tel"
                         placeholder="Masukkan nomor telepon toko Anda (opsional)"
-                        {...signUpForm.register('storePhone')}
+                        {...signUpForm.register("storePhone")}
                       />
                     </div>
                     <p className="text-xs text-muted-foreground">
@@ -305,12 +376,10 @@ export const Login: React.FC = () => {
                   </CollapsibleContent>
                 </Collapsible>
 
-                <Button
-                  type="submit"
-                  className="w-full"
-                  disabled={isLoading}
-                >
-                  {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                <Button type="submit" className="w-full" disabled={isLoading}>
+                  {isLoading && (
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  )}
                   Daftar Gratis
                 </Button>
               </form>
@@ -320,12 +389,15 @@ export const Login: React.FC = () => {
           {/* Google sign-in (shared by both tabs; hidden when not configured) */}
           <GoogleLoginButton />
         </CardContent>
-        <CardFooter className="text-center">
-          <p className="text-sm text-muted-foreground">
-            Akses aman ke sistem manajemen laundry Anda
-          </p>
+        <CardFooter className="justify-center text-center">
+          <Link
+            to="/"
+            className="text-sm font-semibold text-primary underline underline-offset-4"
+          >
+            Kembali ke website {laundrySite.name}
+          </Link>
         </CardFooter>
       </Card>
-    </div>
+    </main>
   );
 };

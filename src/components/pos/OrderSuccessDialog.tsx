@@ -27,11 +27,9 @@ interface OrderSuccessDialogProps {
 export const OrderSuccessDialog: React.FC<OrderSuccessDialogProps> = ({
   isOpen,
   onClose,
-  orderId,
   orderNumber,
   totalAmount,
   paymentMethod,
-  customerName,
   whatsAppSent,
   pointsEarned,
   pointsRedeemed,

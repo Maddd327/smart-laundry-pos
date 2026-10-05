@@ -1,0 +1,37 @@
+[
+  {
+    "name": "Catalog loading",
+    "status": "PASS",
+    "evidence": "Loading indicator shown during delayed outlet query."
+  },
+  {
+    "name": "Configured outlet and mobile accessibility",
+    "status": "PASS",
+    "evidence": "Scoped mocked outlet supplies actual catalog, prices and contact; two kg at fixture Rp7.500 = Rp15.000; no fallback catalog. Mobile Axe scan clean."
+  },
+  {
+    "name": "Empty catalog",
+    "status": "PASS",
+    "evidence": "Explicit empty state and contact action replace the order form, without fabricated fallback prices."
+  },
+  {
+    "name": "Catalog error and retry",
+    "status": "PASS",
+    "evidence": "503 shows error state; retry loads recovered catalog."
+  },
+  {
+    "name": "Dashboard controls",
+    "status": "PASS",
+    "evidence": "All eight activity links, recent-order row, create-order button, and history link open their intended routes with mocked data."
+  },
+  {
+    "name": "Dashboard integration",
+    "status": "PASS",
+    "evidence": "Mocked authenticated owner dashboard renders without overflow at 320/390/768/1440; create order, history, customers, and return to website work. Existing DB mutations intercepted, no real account or order created."
+  },
+  {
+    "name": "Authenticated runtime",
+    "status": "PASS",
+    "evidence": "No browser exceptions on tested operational navigation with mocked backend."
+  }
+]

@@ -5,7 +5,7 @@ import { useToast } from '@/hooks/use-toast';
 import { useStore } from '@/contexts/StoreContext';
 import { useWhatsApp } from '@/hooks/useWhatsApp';
 import { WhatsAppDataHelper } from '@/integrations/whatsapp/data-helper';
-import { OrderCreatedData, OrderCompletedData, OrderReadyForPickupData, PaymentConfirmationData } from '@/integrations/whatsapp/types';
+import { OrderCreatedData, OrderReadyForPickupData, PaymentConfirmationData } from '@/integrations/whatsapp/types';
 import type { CreateOrderData, UnitItem } from './useOrdersOptimized';
 import { POINTS_TO_CURRENCY_RATE } from '@/components/orders/PayLaterPaymentDialog';
 import { computePointsEarned } from '@/lib/pointsCalculation';

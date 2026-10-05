@@ -3,11 +3,9 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Separator } from '@/components/ui/separator';
 import { 
   Bluetooth, 
   Printer, 
-  Smartphone, 
   CheckCircle, 
   XCircle, 
   AlertTriangle,
@@ -17,9 +15,7 @@ import {
 import { toast } from 'sonner';
 import {
   isBluetoothSupported,
-  isThermerAppAvailable,
   printToThermalPrinter,
-  printToThermerApp,
   fetchReceiptDataForThermal,
   type LocalReceiptData
 } from '@/lib/printUtils';
@@ -100,40 +96,9 @@ export const ThermalPrinterManager: React.FC<ThermalPrinterManagerProps> = ({
     }
   }, [printerConnection, canPrint, orderId, localReceiptData, onPrintSuccess, onPrintError, clearError]);
 
-  const handlePrintThermer = useCallback(async () => {
-    if (!canPrint) return;
-
-    setIsPrinting(true);
-    clearError();
-
-    try {
-      // Fetch receipt data, unless we already have it in memory (an
-      // offline order that hasn't synced to Supabase yet).
-      const receiptData = localReceiptData ?? await fetchReceiptDataForThermal(orderId!);
-
-      // Print via Thermer app
-      await printToThermerApp(receiptData);
-
-      toast.success('📱 Struk berhasil dikirim ke aplikasi Thermer!');
-      if (onPrintSuccess) {
-        onPrintSuccess();
-      }
-    } catch (error) {
-      console.error('Thermer print failed:', error);
-      const errorMessage = error instanceof Error ? error.message : 'Pencetakan Thermer gagal';
-      toast.error(`❌ Pencetakan Thermer gagal: ${errorMessage}`);
-      if (onPrintError) {
-        onPrintError(errorMessage);
-      }
-    } finally {
-      setIsPrinting(false);
-    }
-  }, [canPrint, orderId, localReceiptData, onPrintSuccess, onPrintError, clearError]);
-
   const bluetoothSupported = isBluetoothSupported();
-  const thermerAvailable = isThermerAppAvailable();
 
-  if (!bluetoothSupported && !thermerAvailable) {
+  if (!bluetoothSupported) {
     return (
       <Alert>
         <AlertTriangle className="h-4 w-4" />
@@ -234,37 +199,6 @@ export const ThermalPrinterManager: React.FC<ThermalPrinterManagerProps> = ({
           </div>
         )}
 
-        {/* Separator if both options are available */}
-        {bluetoothSupported && thermerAvailable && (
-          <Separator />
-        )}
-
-        {/* Thermer App Section */}
-        {thermerAvailable && (
-          <div className="space-y-3">
-            <div className="flex items-center space-x-2">
-              <Smartphone className="h-4 w-4" />
-              <span className="font-medium">Integrasi Aplikasi Thermer</span>
-              <Badge variant="outline">Direkomendasikan</Badge>
-            </div>
-
-            <p className="text-sm text-muted-foreground">
-              Gunakan aplikasi Thermer sebagai jembatan untuk mencetak ke berbagai printer thermal Bluetooth.
-            </p>
-
-            <Button
-              onClick={handlePrintThermer}
-              disabled={isPrinting || !canPrint}
-              variant="outline"
-              size="sm"
-              className="flex items-center space-x-2 w-full"
-            >
-              {isPrinting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Smartphone className="h-4 w-4" />}
-              <span>{isPrinting ? 'Mengirim ke Thermer...' : 'Cetak via Aplikasi Thermer'}</span>
-            </Button>
-          </div>
-        )}
-
         {/* Error Display */}
         {lastError && (
           <Alert variant="destructive">
@@ -279,7 +213,7 @@ export const ThermalPrinterManager: React.FC<ThermalPrinterManagerProps> = ({
         <div className="text-xs text-muted-foreground space-y-1">
           <p>• Pastikan printer thermal Anda menyala dan dalam mode pairing</p>
           <p>• Untuk hasil terbaik, gunakan kertas thermal 58mm</p>
-          <p>• Aplikasi Thermer mendukung lebih banyak model printer dan lebih mudah diatur</p>
+          <p>• Gunakan browser yang mendukung Web Bluetooth melalui HTTPS</p>
         </div>
       </CardContent>
     </Card>

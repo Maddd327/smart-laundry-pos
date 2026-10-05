@@ -2,7 +2,6 @@ import React, { useEffect, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import { Receipt, ChevronDown, ChevronUp, Star } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
-import { WhatsAppDataHelper } from '@/integrations/whatsapp/data-helper';
 import { StoreInfo } from '@/integrations/whatsapp/types';
 import { CustomerPointsCard } from '@/components/customers/CustomerPointsCard';
 import { PageLoading } from '@/components/ui/loading-spinner';

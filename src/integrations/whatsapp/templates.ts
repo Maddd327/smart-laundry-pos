@@ -1,4 +1,3 @@
-import { Capacitor } from '@capacitor/core';
 import { MessageTemplate, OrderCreatedData, OrderCompletedData, OrderReadyForPickupData, PaymentConfirmationData } from './types';
 import { POINTS_TO_CURRENCY_RATE } from '@/components/orders/PayLaterPaymentDialog';
 
@@ -11,21 +10,16 @@ const getReceiptBaseUrl = (): string => {
     return import.meta.env.VITE_RECEIPT_BASE_URL;
   }
 
-  // VITE_APP_ORIGIN is already baked into native builds for the WhatsApp API
-  // base URL (see whatsapp-config.ts) - reuse it here too.
+  // An explicit origin is useful when receipts use a separate public domain.
   if (import.meta.env.VITE_APP_ORIGIN) {
     return import.meta.env.VITE_APP_ORIGIN;
   }
 
-  // On native platforms the WebView's own origin is a synthetic local
-  // address (`https://localhost` on Android, `capacitor://localhost` on
-  // iOS), never the real deployed domain, so it must never be used here -
-  // fall straight through to the hardcoded production fallback instead.
-  if (typeof window !== 'undefined' && !Capacitor.isNativePlatform()) {
+  if (typeof window !== 'undefined') {
     return window.location.origin;
   }
 
-  // Fallback for native builds without env vars, SSR, or build time
+  // Fallback for server rendering or build time.
   return 'https://pos.fahrudina.my.id';
 };
 
@@ -202,28 +196,6 @@ ${getReceiptBaseUrl()}/receipt/${data.orderId}`;
    * Template for order ready for pickup notification
    */
   orderReadyForPickup: (data: OrderReadyForPickupData): string => {
-    const readyDate = new Date().toLocaleDateString('id-ID', {
-      day: '2-digit',
-      month: '2-digit',
-      year: 'numeric'
-    });
-    const readyTime = new Date().toLocaleTimeString('id-ID', {
-      hour: '2-digit',
-      minute: '2-digit',
-      hour12: false
-    });
-
-    // Build services list from order items
-    const servicesList = data.orderItems.length > 0 
-      ? data.orderItems.map(item => {
-          let serviceInfo = `Tipe Laundry : ${item.service_name}`;
-          if (item.service_type === 'kilo' && item.weight_kg) {
-            serviceInfo += `\nBerat (kg) = ${item.weight_kg}`;
-          }
-          return serviceInfo;
-        }).join('\n\n')
-      : 'Tipe Laundry : Regular';
-
     return `📦 *LAUNDRY SIAP DIAMBIL* 📦
 
 Hai ${data.customerName},

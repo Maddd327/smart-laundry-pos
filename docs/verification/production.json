@@ -1,0 +1,4 @@
+{
+  "status": "PASS",
+  "evidence": "Production build renders storefront and lazy login without browser exceptions. Worker installs, caches only public static resources, and serves offline fallback for uncached receipt navigation. Reconnect link restores storefront. No install manifest. Mobile has no overflow."
+}

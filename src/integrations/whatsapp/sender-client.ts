@@ -7,7 +7,7 @@ import {
 
 const ENDPOINT = '/api/wa-sender-register';
 
-async function post<T extends { success: boolean }>(body: Record<string, unknown>): Promise<T> {
+async function post<T extends { success: boolean }>(body: Record<string, unknown>, failure: T): Promise<T> {
   try {
     const response = await fetch(ENDPOINT, {
       method: 'POST',
@@ -18,9 +18,9 @@ async function post<T extends { success: boolean }>(body: Record<string, unknown
     return data as T;
   } catch (error) {
     return {
-      success: false,
+      ...failure,
       error: error instanceof Error ? error.message : 'Network error',
-    } as T;
+    };
   }
 }
 
@@ -32,15 +32,15 @@ async function post<T extends { success: boolean }>(body: Record<string, unknown
  */
 export const WhatsAppSenderClient = {
   startQRRegistration(): Promise<StartQRRegistrationResponse> {
-    return post<StartQRRegistrationResponse>({ action: 'qr' });
+    return post<StartQRRegistrationResponse>({ action: 'qr' }, { success: false });
   },
 
   startCodeRegistration(phoneNumber: string): Promise<StartCodeRegistrationResponse> {
-    return post<StartCodeRegistrationResponse>({ action: 'code', phone_number: phoneNumber });
+    return post<StartCodeRegistrationResponse>({ action: 'code', phone_number: phoneNumber }, { success: false });
   },
 
   getRegistrationStatus(sessionId: string): Promise<RegistrationStatusResponse> {
-    return post<RegistrationStatusResponse>({ action: 'status', session_id: sessionId });
+    return post<RegistrationStatusResponse>({ action: 'status', session_id: sessionId }, { success: false, status: 'failed' });
   },
 
   /**
@@ -49,6 +49,6 @@ export const WhatsAppSenderClient = {
    * store's numbers) never reaches this client.
    */
   checkSender(phoneNumber: string): Promise<CheckSenderResponse> {
-    return post<CheckSenderResponse>({ action: 'check', phone_number: phoneNumber });
+    return post<CheckSenderResponse>({ action: 'check', phone_number: phoneNumber }, { success: false, registered: false, sender_id: null });
   },
 };

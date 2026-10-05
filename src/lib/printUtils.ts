@@ -1,6 +1,5 @@
 import { supabase } from '@/integrations/supabase/client';
-import { BleClient, BleService } from '@capacitor-community/bluetooth-le';
-import { Capacitor } from '@capacitor/core';
+import { BleClient, type BleService } from './webBluetooth';
 import type { OfflineOrderPayload } from '@/lib/offlineDb';
 
 // Constants
@@ -16,17 +15,6 @@ const THERMAL_PRINTER_SERVICES = [
   '0000fee1-0000-1000-8000-00805f9b34fb', // Alternative MP-series service
   '49535343-fe7d-4ae5-8fa9-9fafd205e455', // Microchip RN4020 service (common in thermal printers)
   '6e400001-b5a3-f393-e0a9-e50e24dcca9e', // Nordic UART Service
-];
-
-const THERMAL_PRINTER_CHARACTERISTICS = [
-  '00002a00-0000-1000-8000-00805f9b34fb', // Generic write characteristic
-  '0000ff01-0000-1000-8000-00805f9b34fb', // Custom write characteristic
-  '000018f1-0000-1000-8000-00805f9b34fb', // Thermal printer data characteristic
-  '0000fee1-0000-1000-8000-00805f9b34fb', // MP-series write characteristic
-  '0000fee2-0000-1000-8000-00805f9b34fb', // MP-series data characteristic
-  '49535343-8841-43f4-a8d4-ecbe34729bb3', // Microchip write characteristic
-  '6e400002-b5a3-f393-e0a9-e50e24dcca9e', // Nordic UART TX characteristic
-  '6e400003-b5a3-f393-e0a9-e50e24dcca9e', // Nordic UART RX characteristic
 ];
 
 // ESC/POS Commands
@@ -114,7 +102,7 @@ const combineBytes = (...arrays: Uint8Array[]): Uint8Array => {
 };
 
 /**
- * Wrap a Uint8Array in a DataView, as required by @capacitor-community/bluetooth-le's write calls
+ * Wrap receipt bytes for Web Bluetooth writes.
  */
 const uint8ArrayToDataView = (bytes: Uint8Array): DataView => {
   return new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
@@ -221,7 +209,6 @@ export const generateReceiptPDF = async (
 ): Promise<void> => {
   const {
     filename = 'receipt.pdf',
-    quality = 1,
     scale = 2
   } = options;
 
@@ -289,7 +276,6 @@ export const generateReceiptPDFFromUrl = async (
 ): Promise<void> => {
   const {
     filename = `receipt-${orderId}.pdf`,
-    quality = 1,
     scale = 2
   } = options;
 
@@ -375,10 +361,10 @@ export const generateReceiptPDFFromUrl = async (
 };
 
 /**
- * Check if Bluetooth Low Energy is supported: native (Android/iOS via Capacitor) or Web Bluetooth in-browser
+ * Check browser Bluetooth support.
  */
 export const isBluetoothSupported = (): boolean => {
-  return Capacitor.isNativePlatform() || 'bluetooth' in navigator;
+  return window.isSecureContext && 'bluetooth' in navigator;
 };
 
 /**
@@ -386,10 +372,7 @@ export const isBluetoothSupported = (): boolean => {
  * known thermal-printer service UUIDs but falling back to any writable characteristic
  * if none of those are present.
  *
- * Note: the "fall back to any service" path only does anything useful on native platforms.
- * On web, requestDevice's optionalServices (set to THERMAL_PRINTER_SERVICES) is a hard
- * allowlist enforced by the Web Bluetooth API itself - getServices() can never return a
- * service outside that list there, so `services` is already equivalent to `knownServices`.
+ * Browser discovery is limited to the allowed thermal service UUIDs.
  */
 const findWritableCharacteristic = async (
   deviceId: string,
@@ -425,17 +408,8 @@ const findWritableCharacteristic = async (
 };
 
 /**
- * Check if Thermer app integration is available
- */
-export const isThermerAppAvailable = (): boolean => {
-  // Check if we're in an Android WebView that might have Thermer integration
-  return /Android/i.test(navigator.userAgent) && 'Android' in window;
-};
-
-/**
  * Connect to thermal printer via Bluetooth Low Energy.
- * Works both inside the native Android/iOS app (via Capacitor's native BLE stack) and
- * in a regular browser (the plugin falls back to the Web Bluetooth API on web).
+ * Uses the browser device picker and Web Bluetooth API.
  *
  * @param onDisconnect Optional callback fired with the device's ID when it disconnects unexpectedly
  */
@@ -447,19 +421,7 @@ export const connectThermalPrinter = async (
   }
 
   try {
-    // androidNeverForLocation defaults to false - this repo's android/ project is
-    // regenerated fresh by CI (npx cap add android) with no manifest patch step, so we
-    // can't assert neverForLocation without the matching AndroidManifest.xml declaration.
-    // Asserting it without that manifest entry makes Android silently return zero BLE
-    // scan results instead of erroring.
     await BleClient.initialize();
-
-    // Android 13+ forbids silently turning Bluetooth on for the user - requestEnable() is
-    // the closest available thing, showing the native "Turn on Bluetooth?" system prompt
-    // instead of making the user dig into Settings manually before every connect attempt.
-    if (Capacitor.getPlatform() === 'android' && !(await BleClient.isEnabled())) {
-      await BleClient.requestEnable();
-    }
 
     // Let the user pick from all nearby BLE devices - printer name/branding varies too much
     // across vendors to reliably pre-filter, so we discover the write characteristic afterward instead.
@@ -477,14 +439,7 @@ export const connectThermalPrinter = async (
       }
     });
 
-    let services = await BleClient.getServices(device.deviceId);
-    const hasDiscoveredCharacteristics = services.some(service => service.characteristics.length > 0);
-    // Some Android devices resolve `connect` before GATT service discovery has actually
-    // finished, leaving getServices() empty - force a fresh discovery and retry once.
-    if (!hasDiscoveredCharacteristics && Capacitor.isNativePlatform()) {
-      await BleClient.discoverServices(device.deviceId);
-      services = await BleClient.getServices(device.deviceId);
-    }
+    const services = await BleClient.getServices(device.deviceId);
 
     const writable = await findWritableCharacteristic(device.deviceId, services);
 
@@ -522,7 +477,7 @@ export const disconnectThermalPrinter = async (connection: ThermalPrinterConnect
  * Format receipt content for thermal printing
  */
 const formatReceiptForThermal = (receiptData: any, options: ThermalPrintOptions = {}): Uint8Array => {
-  const { paperWidth = 32, fontSize = 'normal', alignment = 'left' } = options;
+  const { paperWidth = 32 } = options;
   const commands: Uint8Array[] = [];
   
   // Initialize printer
@@ -902,20 +857,8 @@ export const printToThermalPrinter = async (
       ...options
     });
 
-    // Native BLE writes are capped at the negotiated MTU minus 3 bytes of ATT overhead -
-    // a fixed 128-byte chunk can exceed that (default MTU is often only 23 bytes) and every
-    // write then fails. getMtu isn't available on web, where the plugin's Web Bluetooth
-    // backing handles this differently, so keep the previous fixed size there.
-    let CHUNK_SIZE = 128;
-    if (Capacitor.isNativePlatform()) {
-      try {
-        const mtu = await BleClient.getMtu(connection.deviceId);
-        CHUNK_SIZE = Math.max(20, mtu - 3);
-      } catch (error) {
-        console.warn('Failed to read negotiated MTU, falling back to a conservative chunk size:', error);
-        CHUNK_SIZE = 20;
-      }
-    }
+    // Preserve the packet size used by the existing browser printing path.
+    const CHUNK_SIZE = 128;
     const chunks: Uint8Array[] = [];
 
     for (let i = 0; i < printData.byteLength; i += CHUNK_SIZE) {
@@ -1075,41 +1018,5 @@ export const fetchReceiptDataForThermal = async (orderId: string): Promise<any> 
   } catch (error) {
     console.error('Error fetching receipt data for thermal printing:', error);
     throw error;
-  }
-};
-
-/**
- * Print receipt using Thermer app integration
- */
-export const printToThermerApp = async (receiptData: any): Promise<void> => {
-  if (!isThermerAppAvailable()) {
-    throw new Error('Thermer app integration is not available');
-  }
-
-  try {
-    // Format receipt data for Thermer app
-    const thermerData = {
-      type: 'receipt',
-      data: {
-        header: receiptData.storeName || 'LAUNDRY RECEIPT',
-        items: receiptData.items || [],
-        total: receiptData.totalAmount || 0,
-        customer: receiptData.customerName || '',
-        orderId: receiptData.orderId || '',
-        date: receiptData.orderDate || new Date().toISOString(),
-      }
-    };
-
-    // Use Android WebView interface to communicate with Thermer app
-    if ('Android' in window && 'printReceipt' in (window as any).Android) {
-      await (window as any).Android.printReceipt(JSON.stringify(thermerData));
-    } else {
-      // Fallback: try to open Thermer app with intent
-      const intentUrl = `intent://print?data=${encodeURIComponent(JSON.stringify(thermerData))}#Intent;scheme=thermer;package=mate.bluetoothprint;end`;
-      window.location.href = intentUrl;
-    }
-  } catch (error) {
-    console.error('Error printing with Thermer app:', error);
-    throw new Error(`Failed to print with Thermer app: ${error.message}`);
   }
 };

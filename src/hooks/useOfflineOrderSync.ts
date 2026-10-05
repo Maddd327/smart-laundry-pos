@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
-import { offlineDb, type QueuedOfflineOrder, type OfflineOrderError, type OfflineOrderStep } from '@/lib/offlineDb';
+import { offlineDb, type QueuedOfflineOrder, type OfflineOrderError } from '@/lib/offlineDb';
 import { retryQueuedOrder } from '@/hooks/useOfflineOrderQueue';
 import { computePointsEarned } from '@/lib/pointsCalculation';
 import { useWhatsApp } from '@/hooks/useWhatsApp';
@@ -53,7 +53,7 @@ const PERMANENT_ERROR_CODES = new Set([
   '22P02', // invalid_text_representation
 ]);
 
-function throwClassified(error: { code?: string; message?: string }, step: OfflineOrderStep): never {
+function throwClassified(error: { code?: string; message?: string }): never {
   if (error.code && PERMANENT_ERROR_CODES.has(error.code)) {
     throw new PermanentSyncError(error.message || `Postgres error ${error.code}`, error.code);
   }
@@ -146,7 +146,7 @@ async function processQueuedOrder(
           }
           // fall through - confirmed already inserted by us
         } else {
-          throwClassified(error, 'orders');
+          throwClassified(error);
         }
       }
 
@@ -162,7 +162,7 @@ async function processQueuedOrder(
         .limit(1);
 
       if (existingError) {
-        throwClassified(existingError, 'order_items');
+        throwClassified(existingError);
       }
 
       if (!existingItems || existingItems.length === 0) {
@@ -182,7 +182,7 @@ async function processQueuedOrder(
 
         const { error } = await supabase.from('order_items').insert(orderItems);
         if (error) {
-          throwClassified(error, 'order_items');
+          throwClassified(error);
         }
       }
 
@@ -206,7 +206,7 @@ async function processQueuedOrder(
         // it retries instead of quietly advancing past 'done' and deleting
         // a record whose points were never actually evaluated.
         if (storeError) {
-          throwClassified(storeError, 'points_earning');
+          throwClassified(storeError);
         }
 
         if (storeRow?.enable_points) {
@@ -219,7 +219,7 @@ async function processQueuedOrder(
               p_points_earned: pointsEarned,
             });
             if (error) {
-              throwClassified(error, 'points_earning');
+              throwClassified(error);
             }
           }
         }

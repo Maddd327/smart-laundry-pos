@@ -71,7 +71,6 @@ export const FloatingOrderSummary: React.FC<FloatingOrderSummaryProps> = ({
   removeFromOrder,
   removeDynamicItem,
   discountAmount,
-  pointsRedeemed,
   onDiscountChange,
   onPointsRedeemedChange,
 }) => {

@@ -11,10 +11,6 @@
       "destination": "/login/index.html"
     },
     {
-      "source": "/install",
-      "destination": "/install/index.html"
-    },
-    {
       "source": "/(.*)",
       "destination": "/index.html"
     }

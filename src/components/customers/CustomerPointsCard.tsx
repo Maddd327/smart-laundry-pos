@@ -19,7 +19,7 @@ export const CustomerPointsCard: React.FC<CustomerPointsCardProps> = ({
 }) => {
   const { currentStore } = useStore();
   const { data: points, isLoading: pointsLoading } = useCustomerPoints(customerPhone);
-  const { data: transactions, isLoading: transactionsLoading } = useCustomerPointTransactions(
+  const { data: transactions } = useCustomerPointTransactions(
     customerPhone,
     5
   );

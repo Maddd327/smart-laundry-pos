@@ -1,9 +1,9 @@
 import React, { memo, useEffect, useState } from 'react';
 import { FixedSizeList as List } from 'react-window';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Eye, Printer, Download, Receipt, Bluetooth, MessageSquare, Loader2 } from 'lucide-react';
+import { Eye, Printer, Receipt, MessageSquare, Loader2 } from 'lucide-react';
 import { Order } from '@/hooks/useOrdersOptimized';
 
 interface VirtualizedOrderListProps {

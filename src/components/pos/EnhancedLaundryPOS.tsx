@@ -1,13 +1,12 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Search, Plus, Clock, CreditCard, User, ShoppingCart, CheckCircle, X, CheckCircle2, ArrowDown, ChevronDown, WifiOff } from 'lucide-react';
+import { Search, Plus, User, CheckCircle, X, CheckCircle2, ArrowDown, ChevronDown, WifiOff } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { Input } from '@/components/ui/input';
-import { Badge } from '@/components/ui/badge';
 import { useNavigate } from 'react-router-dom';
 import { useCustomers } from '@/hooks/useCustomers';
-import { useCreateOrderWithNotifications as useCreateOrder, UnitItem, CreateOrderData } from '@/hooks/useOrdersWithNotifications';
+import { useCreateOrderWithNotifications as useCreateOrder, CreateOrderData } from '@/hooks/useOrdersWithNotifications';
 import { toast } from 'sonner';
 import { useServices, useSeedDefaultServices } from '@/hooks/useServices';
 import { useStore } from '@/contexts/StoreContext';
@@ -55,7 +54,7 @@ export const EnhancedLaundryPOS = () => {
   const [offlineReceiptData, setOfflineReceiptData] = useState<LocalReceiptData | null>(null);
 
   const navigate = useNavigate();
-  const { customers, searchCustomers, getCustomerByPhone, loading: customersLoading } = useCustomers();
+  const { customers, searchCustomers } = useCustomers();
   const createOrderMutation = useCreateOrder();
   const { currentStore } = useStore();
   const isOnline = useOnlineStatus();
@@ -383,11 +382,6 @@ export const EnhancedLaundryPOS = () => {
 
     setDynamicItems(prev => [...prev, newDynamicItem]);
     notifyItemAdded(dynamicItem.itemName);
-  };
-
-  // Remove item from order
-  const removeFromOrder = (index: number) => {
-    setCurrentOrder(prev => prev.filter((_, i) => i !== index));
   };
 
   // Remove dynamic item

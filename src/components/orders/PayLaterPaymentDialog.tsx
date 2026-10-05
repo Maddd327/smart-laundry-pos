@@ -40,7 +40,6 @@ export const PayLaterPaymentDialog: React.FC<PayLaterPaymentDialogProps> = ({
   totalAmount,
   customerPhone,
   customerName,
-  orderId,
   onSubmit,
 }) => {
   const [selectedPaymentMethod, setSelectedPaymentMethod] = useState<string>('cash');

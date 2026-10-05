@@ -1,826 +1,880 @@
-import React, { useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { usePageMeta } from '@/hooks/usePageMeta';
+import { useEffect, useRef, useState } from "react";
+import { Link } from "react-router-dom";
 import {
-  Zap,
-  Receipt,
-  MessageSquare,
-  BarChart3,
-  Store,
-  Gift,
-  Megaphone,
-  Smartphone,
-  ClipboardList,
-  Globe,
-  Wifi,
-  Download,
-  ArrowRight,
   ArrowUpRight,
-} from 'lucide-react';
-import { PWAInstallButton } from '@/components/ui/PWAInstallButton';
-import { WhatsAppFloatingButton } from '@/components/ui/WhatsAppFloatingButton';
-import './LandingPage.css';
+  Check,
+  ChevronDown,
+  Clock3,
+  ClipboardList,
+  Mail,
+  MapPin,
+  Menu,
+  MessageCircle,
+  Shirt,
+  Truck,
+  WashingMachine,
+  X,
+} from "lucide-react";
+import { useAuth } from "@/contexts/AuthContext";
+import { usePageMeta } from "@/hooks/usePageMeta";
+import { usePublicLaundry } from "@/hooks/usePublicLaundry";
+import { OrderRequestForm } from "@/components/laundry/OrderRequestForm";
+import { LaundryWordmark } from "@/components/laundry/LaundryWordmark";
+import {
+  formatRupiah,
+  laundrySite,
+  serviceDuration,
+  whatsAppLink,
+} from "@/lib/laundrySite";
+import "./LandingPage.css";
 
-const FONT_LINK_ID = 'tk-landing-fonts';
-
-/** Fixed-name release asset that release-android.yml re-publishes on every
- * tagged build, so this URL never has to be updated for new versions. */
-const ANDROID_APK_URL =
-  'https://github.com/fahrudina/smart-laundry-pos/releases/latest/download/smart-laundry-pos-latest.apk';
-
-/** lucide-react has no Android glyph, so this is the standard bugdroid head
- * outline (Material Design Icons, Apache-2.0) — lets the download button
- * read as "Android app" at a glance instead of the generic Smartphone icon. */
-const AndroidIcon = ({ className }: { className?: string }) => (
-  <svg viewBox="0 0 24 24" fill="currentColor" className={className} aria-hidden="true">
-    <path d="M16.61 15.15C16.15 15.15 15.77 14.78 15.77 14.32S16.15 13.5 16.61 13.5H16.61C17.07 13.5 17.45 13.86 17.45 14.32C17.45 14.78 17.07 15.15 16.61 15.15M7.41 15.15C6.95 15.15 6.57 14.78 6.57 14.32C6.57 13.86 6.95 13.5 7.41 13.5H7.41C7.87 13.5 8.24 13.86 8.24 14.32C8.24 14.78 7.87 15.15 7.41 15.15M16.91 10.14L18.58 7.26C18.67 7.09 18.61 6.88 18.45 6.79C18.28 6.69 18.07 6.75 18 6.92L16.29 9.83C14.95 9.22 13.5 8.9 12 8.91C10.47 8.91 9 9.24 7.73 9.82L6.04 6.91C5.95 6.74 5.74 6.68 5.57 6.78C5.4 6.87 5.35 7.08 5.44 7.25L7.1 10.13C4.25 11.69 2.29 14.58 2 18H22C21.72 14.59 19.77 11.7 16.91 10.14H16.91Z" />
-  </svg>
-);
-
-/** Loads the ticket-stub type pair only while the landing page is mounted,
- * so authenticated app sessions never pay for this download. */
-const useLandingFonts = () => {
-  useEffect(() => {
-    if (document.getElementById(FONT_LINK_ID)) return;
-    const link = document.createElement('link');
-    link.id = FONT_LINK_ID;
-    link.rel = 'stylesheet';
-    link.href =
-      'https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600;700&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap';
-    document.head.appendChild(link);
-  }, []);
-};
-
-const features = [
-  {
-    serial: '0231',
-    icon: Zap,
-    title: 'Input Order Super Cepat',
-    description: 'Timbang, pilih layanan, cetak — antrian pagi tidak lagi menumpuk di meja kasir.',
-  },
-  {
-    serial: '0454',
-    icon: Receipt,
-    title: 'Struk & e-Struk Otomatis',
-    description: 'Setiap transaksi keluar dengan nota rapi, lengkap dengan berat dan rincian harga.',
-  },
-  {
-    serial: '0512',
-    icon: MessageSquare,
-    title: 'Notifikasi WhatsApp Real-time',
-    description: 'Pelanggan tahu persis kapan cucian siap diambil, tanpa mereka harus telepon dulu.',
-  },
-  {
-    serial: '0687',
-    icon: BarChart3,
-    title: 'Dashboard Omzet & Laporan Harian',
-    description: 'Uang masuk, kinerja outlet, dan jam sibuk terbaca dalam satu layar.',
-  },
-  {
-    serial: '0733',
-    icon: Store,
-    title: 'Multi-outlet & Multi-kasir',
-    description: 'Buka cabang kedua, ketiga, keempat — datanya tetap satu sistem, bukan satu buku per toko.',
-  },
-  {
-    serial: '0810',
-    icon: Gift,
-    title: 'Smart Point untuk Pelanggan Loyal',
-    description: 'Poin terkumpul otomatis tiap transaksi, jadi alasan pelanggan balik ke toko kamu lagi.',
-  },
-  {
-    serial: '0902',
-    icon: Megaphone,
-    title: 'Broadcast Promo ke Pelanggan',
-    description: 'Kirim info promo ke seluruh daftar pelanggan lewat WhatsApp, sekali klik.',
-  },
+const navigation = [
+  ["Layanan", "#layanan"],
+  ["Harga", "#harga"],
+  ["Cara Kerja", "#cara-kerja"],
+  ["Tentang", "#tentang"],
+  ["Testimoni", "#testimoni"],
+  ["FAQ", "#faq"],
+  ["Kontak", "#kontak"],
 ];
-
-const benefits = [
-  'Dukungan manajemen multi-toko',
-  'Pelacakan pesanan real-time',
-  'Kalkulasi harga otomatis',
-  'Sistem notifikasi pelanggan',
-  'Manajemen inventori',
-  'Pelaporan keuangan',
-  'Tools manajemen staff',
-  'Dukungan mode offline',
-];
-
-const comparisonRows: {
-  feature: string;
-  smart: 'yes';
-  qasir: 'yes' | 'no' | 'partial';
-  pawoon: 'yes' | 'no' | 'partial';
-  majoo: 'yes' | 'no' | 'partial';
-  note?: { qasir?: string; pawoon?: string; majoo?: string };
-}[] = [
+const processSteps = [
   {
-    feature: 'Dioptimalkan untuk bisnis laundry',
-    smart: 'yes',
-    qasir: 'no',
-    pawoon: 'no',
-    majoo: 'no',
-    note: { qasir: 'POS umum', pawoon: 'POS umum', majoo: 'POS umum' },
-  },
-  { feature: 'Input laundry cepat (per kg / item)', smart: 'yes', qasir: 'no', pawoon: 'no', majoo: 'no' },
-  {
-    feature: 'Struk + e-struk laundry',
-    smart: 'yes',
-    qasir: 'partial',
-    pawoon: 'partial',
-    majoo: 'partial',
-    note: { qasir: 'Dasar', pawoon: 'Dasar', majoo: 'Dasar' },
+    icon: ClipboardList,
+    title: "Pilih & kirim detail",
+    description: "Tentukan layanan dan isi form pemesanan di website.",
   },
   {
-    feature: 'Loyalty khusus laundry (Smart Point)',
-    smart: 'yes',
-    qasir: 'no',
-    pawoon: 'no',
-    majoo: 'yes',
-    note: { majoo: 'Poin umum' },
-  },
-  { feature: 'Notifikasi WhatsApp otomatis', smart: 'yes', qasir: 'no', pawoon: 'no', majoo: 'no' },
-  {
-    feature: 'Broadcast promo pelanggan',
-    smart: 'yes',
-    qasir: 'partial',
-    pawoon: 'partial',
-    majoo: 'partial',
-    note: { qasir: 'Manual', pawoon: 'Manual', majoo: 'Terbatas' },
-  },
-  { feature: 'Multi-outlet laundry', smart: 'yes', qasir: 'partial', pawoon: 'yes', majoo: 'yes' },
-  { feature: 'Tracking status cucian', smart: 'yes', qasir: 'no', pawoon: 'no', majoo: 'no' },
-  { feature: 'Antrean & label laundry', smart: 'yes', qasir: 'no', pawoon: 'no', majoo: 'no' },
-  {
-    feature: 'Harga ramah UMKM',
-    smart: 'yes',
-    qasir: 'yes',
-    pawoon: 'no',
-    majoo: 'no',
-    note: { pawoon: 'Lebih mahal', majoo: 'Lebih mahal' },
-  },
-];
-
-const faqs: { question: string; answer: string }[] = [
-  {
-    question: 'Apakah Smart Laundry POS gratis digunakan?',
-    answer:
-      'Ya. Smart Laundry POS bisa langsung dipakai gratis tanpa kartu kredit dan tanpa kontrak jangka panjang. Setup awal toko hanya butuh sekitar 5 menit.',
-  },
-  {
-    question: 'Apakah bisa dipakai tanpa koneksi internet?',
-    answer:
-      'Bisa. Smart Laundry POS mendukung mode offline sehingga input pesanan tetap jalan saat sinyal internet di toko sedang tidak stabil, lalu data tersinkron otomatis saat koneksi kembali.',
-  },
-  {
-    question: 'Apakah mendukung laundry kiloan, satuan, dan kombinasi?',
-    answer:
-      'Mendukung ketiganya. Layanan kiloan dihitung dari berat (kg), layanan satuan dihitung per item (misalnya sepatu atau bed cover), dan layanan kombinasi menggabungkan berat sekaligus jumlah item dalam satu pesanan.',
-  },
-  {
-    question: 'Bisakah dipakai untuk lebih dari satu cabang atau outlet laundry?',
-    answer:
-      'Bisa. Smart Laundry POS mendukung multi-outlet dan multi-kasir dalam satu sistem yang sama, jadi pemilik usaha bisa memantau semua cabang tanpa perlu buku catatan terpisah per toko.',
-  },
-  {
-    question: 'Apakah pelanggan dapat notifikasi otomatis saat cucian selesai?',
-    answer:
-      'Ya. Pesanan yang statusnya berubah menjadi siap diambil bisa mengirim notifikasi WhatsApp otomatis ke pelanggan, sehingga mereka tidak perlu menelepon toko untuk menanyakan progres cucian.',
-  },
-  {
-    question: 'Apa bedanya Smart Laundry POS dengan aplikasi kasir umum seperti Qasir, Pawoon, atau Majoo?',
-    answer:
-      'Aplikasi kasir umum dibuat untuk toko kelontong atau restoran lalu dipaksakan untuk laundry. Smart Laundry POS dibangun khusus untuk alur kerja laundry: timbang, hitung harga per kg/unit otomatis, lacak status cucian, dan kirim notifikasi WhatsApp — fitur yang biasanya tidak ada di POS umum.',
-  },
-  {
-    question: 'Apakah Smart Laundry POS punya sistem poin loyalitas pelanggan?',
-    answer:
-      'Punya. Fitur Smart Point mengumpulkan poin secara otomatis untuk transaksi yang sudah lunas, jika pemilik toko mengaktifkan fitur ini di menu pengaturan (nonaktif secara default).',
-  },
-  {
-    question: 'Perlu instal aplikasi khusus atau bisa langsung dipakai dari HP?',
-    answer:
-      'Tidak perlu unduh dari app store. Smart Laundry POS berjalan di browser dan bisa dipasang sebagai aplikasi (PWA) langsung dari layar utama HP, tablet, atau komputer — mendukung Android, iOS, Windows, dan Mac.',
-  },
-];
-
-const Mark: React.FC<{ value: 'yes' | 'no' | 'partial'; note?: string }> = ({ value, note }) => {
-  if (value === 'yes') return <span className="tk-check">✓</span>;
-  if (value === 'no')
-    return (
-      <span className="tk-cross">
-        ✕{note ? <span className="block text-[0.65rem] font-normal normal-case tk-mono text-[var(--tk-graphite-soft)]">{note}</span> : null}
-      </span>
-    );
-  return (
-    <span className="tk-partial">
-      ~{note ? <span className="block text-[0.65rem] font-normal normal-case tk-mono text-[var(--tk-graphite-soft)]">{note}</span> : null}
-    </span>
-  );
-};
-
-export const LandingPage: React.FC = () => {
-  const navigate = useNavigate();
-  useLandingFonts();
-  // index.html already ships these as the default (matches this page), but this
-  // keeps them pinned to "/" when the SPA navigates back here from /login or /install.
-  usePageMeta({
-    title: 'Smart Laundry POS - Sistem Kasir Modern untuk Laundry Indonesia',
+    icon: MessageCircle,
+    title: "Konfirmasi bersama",
     description:
-      'Sistem Point of Sale (POS) modern untuk bisnis laundry di Indonesia. Kelola pesanan, pelanggan, dan pembayaran dengan mudah. Aplikasi mobile, cloud-based, dan bisa diinstall seperti aplikasi native.',
-    path: '/',
+      "Outlet mengonfirmasi layanan, jadwal, dan perkiraan biaya di WhatsApp.",
+  },
+  {
+    icon: WashingMachine,
+    title: "Serahkan cucian",
+    description:
+      "Antar pakaian ke outlet. Permintaan antar jemput dibicarakan terlebih dahulu.",
+  },
+  {
+    icon: Shirt,
+    title: "Tunggu kabar selesai",
+    description:
+      "Ikuti informasi dari outlet, lalu ambil pakaian sesuai jadwal yang disepakati.",
+  },
+];
+const questions = [
+  [
+    "Bagaimana cara memesan laundry?",
+    "Pilih layanan, isi nama, nomor WhatsApp, perkiraan berat atau jumlah, dan tanggal di form. Periksa rincian, buka WhatsApp, lalu kirim ke outlet. Pesanan berlaku setelah dikonfirmasi oleh outlet.",
+  ],
+  [
+    "Berapa lama pengerjaan reguler dan express?",
+    "Katalog acuan mencantumkan 2 hari untuk Cuci Setrika Regular, 1 hari untuk Express Wash, dan 4 jam untuk Setrika Saja. Lihat estimasi pada layanan yang Anda pilih; jadwal akhir mengikuti konfirmasi dan antrean outlet.",
+  ],
+  [
+    "Apakah ada layanan antar jemput?",
+    "Anda dapat mengajukan antar jemput di form. Ketersediaan, jangkauan, jadwal, dan biaya belum dipublikasikan. Pastikan semuanya dikonfirmasi oleh outlet sebelum menunggu penjemputan.",
+  ],
+  [
+    "Apakah harga di website merupakan total akhir?",
+    "Harga dihitung berdasarkan layanan dan perkiraan berat atau jumlah yang Anda masukkan. Total akhir dikonfirmasi setelah penimbangan atau pemeriksaan barang. Katalog yang berlabel harga acuan belum merupakan daftar harga outlet yang terverifikasi.",
+  ],
+  [
+    "Bagaimana metode pembayarannya?",
+    "Sistem kasir mendukung pencatatan tunai, QRIS, dan transfer. Tanyakan metode yang tersedia di outlet saat konfirmasi. Form website tidak meminta pembayaran atau data kartu.",
+  ],
+  [
+    "Bisakah meminta tanpa pewangi atau penanganan terpisah?",
+    "Tuliskan kebutuhan tersebut pada kolom catatan. Outlet akan mengonfirmasi apakah permintaan dapat dipenuhi. Kebijakan pemisahan pakaian belum dipublikasikan, jadi tanyakan sebelum menyerahkan cucian.",
+  ],
+];
+
+export function LandingPage() {
+  const { user } = useAuth();
+  const laundry = usePublicLaundry();
+  const [menuOpen, setMenuOpen] = useState(false);
+  const [selectedServiceId, setSelectedServiceId] = useState("");
+  const [scrolled, setScrolled] = useState(false);
+  const menuButton = useRef<HTMLButtonElement>(null);
+  const navRef = useRef<HTMLElement>(null);
+  const rootRef = useRef<HTMLDivElement>(null);
+  const messageLink = whatsAppLink(
+    laundry.phone,
+    `Halo ${laundry.name}, saya ingin menanyakan layanan laundry.`,
+  );
+  const instagram = /^https:\/\/(www\.)?instagram\.com\//.test(
+    laundrySite.instagram,
+  )
+    ? laundrySite.instagram
+    : "";
+
+  usePageMeta({
+    title: `${laundry.name} | Laundry Kiloan, Setrika & Express`,
+    description: `Kenali layanan ${laundry.name}, lihat harga acuan laundry kiloan dan express, lalu siapkan pesanan langsung melalui website. Jadwal dan harga akhir dikonfirmasi lewat WhatsApp.`,
+    path: "/",
   });
 
-  return (
-    <div className="tk-page min-h-screen pb-24 sm:pb-0">
-      {/* SEO/OG meta tags live in index.html (React 18 does not hoist tags rendered here) */}
+  useEffect(() => {
+    const onScroll = () => setScrolled(window.scrollY > 16);
+    onScroll();
+    window.addEventListener("scroll", onScroll, { passive: true });
+    return () => window.removeEventListener("scroll", onScroll);
+  }, []);
 
-      {/* Header */}
-      <header className="sticky top-0 z-50 border-b border-[var(--tk-line)] bg-[rgba(245,240,228,0.95)] backdrop-blur-sm">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center h-16">
-            <div className="flex items-center min-w-0 flex-1 gap-2 sm:gap-3">
-              <div className="w-9 h-9 flex-shrink-0 border-2 border-[var(--tk-ink)] rounded-sm flex items-center justify-center tk-mono font-bold text-[var(--tk-ink)] text-sm">
-                SL
-              </div>
-              <div className="min-w-0">
-                <span className="block text-base sm:text-lg font-bold text-[var(--tk-graphite)] truncate">
-                  Smart Laundry POS
-                </span>
-                <p className="text-[0.7rem] tk-mono tracking-wide text-[var(--tk-graphite-soft)] hidden sm:block">
-                  SISTEM KASIR LAUNDRY
-                </p>
-              </div>
-            </div>
-            <div className="flex items-center gap-2 sm:gap-3 flex-shrink-0">
-              <PWAInstallButton className="!bg-transparent !border-[var(--tk-line)] !text-[var(--tk-ink)] hover:!bg-[var(--tk-paper-soft)]" />
-              <button
-                onClick={() => navigate('/install')}
-                className="hidden sm:inline-flex items-center gap-2 px-4 py-2 text-sm font-medium border border-[var(--tk-line)] rounded-sm text-[var(--tk-ink-soft)] hover:bg-[var(--tk-paper-soft)] transition-colors"
-              >
-                <Download className="h-4 w-4" />
-                Install Manual
-              </button>
-              <a
-                href={ANDROID_APK_URL}
-                className="hidden sm:inline-flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-sm border border-[var(--tk-line)] text-[var(--tk-ink-soft)] hover:bg-[var(--tk-paper-soft)] transition-colors"
-              >
-                <AndroidIcon className="h-4 w-4" />
-                Download Android
+  useEffect(() => {
+    if (!menuOpen) return;
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        setMenuOpen(false);
+        menuButton.current?.focus();
+      }
+    };
+    const onPointerDown = (event: PointerEvent) => {
+      if (
+        !navRef.current?.contains(event.target as Node) &&
+        !menuButton.current?.contains(event.target as Node)
+      )
+        setMenuOpen(false);
+    };
+    const media = window.matchMedia("(min-width: 1100px)");
+    const closeOnDesktop = () => {
+      if (media.matches) setMenuOpen(false);
+    };
+    document.addEventListener("keydown", onKeyDown);
+    document.addEventListener("pointerdown", onPointerDown);
+    media.addEventListener("change", closeOnDesktop);
+    return () => {
+      document.removeEventListener("keydown", onKeyDown);
+      document.removeEventListener("pointerdown", onPointerDown);
+      media.removeEventListener("change", closeOnDesktop);
+    };
+  }, [menuOpen]);
+
+  useEffect(() => {
+    if (
+      !rootRef.current ||
+      !("IntersectionObserver" in window) ||
+      window.matchMedia("(prefers-reduced-motion: reduce)").matches
+    )
+      return;
+    const observer = new IntersectionObserver(
+      (entries) => {
+        for (const entry of entries)
+          if (entry.isIntersecting) {
+            entry.target.classList.add("is-visible");
+            observer.unobserve(entry.target);
+          }
+      },
+      { threshold: 0.08 },
+    );
+    rootRef.current.querySelectorAll("[data-reveal]").forEach((element) => {
+      element.classList.add("will-reveal");
+      observer.observe(element);
+    });
+    return () => observer.disconnect();
+  }, []);
+
+  function selectService(id: string) {
+    setSelectedServiceId(id);
+    document.getElementById("pesan")?.scrollIntoView({
+      behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches
+        ? "instant"
+        : "smooth",
+    });
+    window.setTimeout(
+      () =>
+        document
+          .getElementById("order-service")
+          ?.focus({ preventScroll: true }),
+      100,
+    );
+  }
+
+  return (
+    <div className="laundry-page" ref={rootRef}>
+      <a className="laundry-skip-link" href="#konten">
+        Lewati ke konten utama
+      </a>
+      <header className={`laundry-header${scrolled ? " is-scrolled" : ""}`}>
+        <div className="laundry-container laundry-header-inner">
+          <a
+            className="laundry-wordmark"
+            href="#home"
+            aria-label={`${laundry.name}, kembali ke beranda`}
+          >
+            <LaundryWordmark name={laundry.name} />
+          </a>
+          <nav
+            id="laundry-navigation"
+            ref={navRef}
+            className={`laundry-nav${menuOpen ? " is-open" : ""}`}
+            aria-label="Navigasi utama"
+          >
+            {navigation.map(([label, href]) => (
+              <a key={href} href={href} onClick={() => setMenuOpen(false)}>
+                {label}
               </a>
-              <button
-                onClick={() => navigate('/login')}
-                className="inline-flex items-center px-4 sm:px-5 py-2 text-sm sm:text-base font-semibold rounded-sm bg-[var(--tk-ink)] text-[var(--tk-paper)] hover:bg-[var(--tk-graphite)] transition-colors"
-              >
-                Masuk
-              </button>
-            </div>
+            ))}
+            <Link
+              className="laundry-mobile-staff"
+              to={user ? "/home" : "/login"}
+            >
+              {user ? "Dashboard outlet" : "Masuk pengelola"}
+            </Link>
+            <a
+              className="laundry-button laundry-mobile-order"
+              href="#pesan"
+              onClick={() => setMenuOpen(false)}
+            >
+              Pesan Sekarang
+            </a>
+          </nav>
+          <div className="laundry-header-actions">
+            <a className="laundry-button laundry-header-cta" href="#pesan">
+              Pesan Sekarang
+            </a>
+            <button
+              ref={menuButton}
+              type="button"
+              className="laundry-menu-toggle"
+              aria-label={
+                menuOpen ? "Tutup menu navigasi" : "Buka menu navigasi"
+              }
+              aria-expanded={menuOpen}
+              aria-controls="laundry-navigation"
+              onClick={() => setMenuOpen(!menuOpen)}
+            >
+              {menuOpen ? (
+                <X aria-hidden="true" />
+              ) : (
+                <Menu aria-hidden="true" />
+              )}
+            </button>
           </div>
         </div>
       </header>
 
-      {/* Hero */}
-      <section className="relative pt-14 pb-20 sm:pt-20 sm:pb-28 px-4 sm:px-6 lg:px-8 overflow-hidden">
-        <div className="max-w-5xl mx-auto">
-          <div className="tk-hero-ticket rounded-sm overflow-hidden">
-            <div className="tk-hero-barcode" />
-            <div className="flex items-center justify-between px-6 sm:px-10 py-3 border-b border-dashed border-[var(--tk-line)] tk-mono text-xs sm:text-sm text-[var(--tk-graphite-soft)] tracking-widest uppercase">
-              <span>Nota Laundry — Aplikasi Kasir</span>
-              <span>No. 00142</span>
+      <main id="konten">
+        <section id="home" className="laundry-hero laundry-container">
+          <div className="laundry-hero-copy">
+            <p className="laundry-eyebrow">
+              <span />
+              Waktu Anda untuk hal yang lebih berarti
+            </p>
+            <h1>
+              Laundry bersih,
+              <br />
+              <span>wangi,</span>
+              <br />
+              tanpa ribet.
+            </h1>
+            <p className="laundry-hero-description">
+              Dari pakaian sehari-hari sampai kemeja favorit. Pilih
+              perawatannya, kirim detail pesanan, lalu biarkan hari Anda tetap
+              berjalan.
+            </p>
+            <div className="laundry-hero-actions">
+              <a className="laundry-button" href="#pesan">
+                Pesan Laundry Sekarang
+                <ArrowUpRight size={18} aria-hidden="true" />
+              </a>
+              <a
+                className="laundry-button laundry-button-secondary"
+                href="#layanan"
+              >
+                Lihat Layanan
+              </a>
             </div>
-
-            <div className="px-6 sm:px-10 py-10 sm:py-14">
-              <span className="tk-eyebrow mb-6">Untuk Laundry Kiloan &amp; Satuan</span>
-
-              <h1 className="text-[2.1rem] leading-[1.12] sm:text-5xl sm:leading-[1.1] lg:text-6xl font-bold text-[var(--tk-graphite)] mb-6 max-w-3xl">
-                Kasir laundry yang jalan secepat antrian pagi.
-              </h1>
-              <p className="text-lg sm:text-xl text-[var(--tk-ink-soft)] mb-3 max-w-2xl">
-                Smart Laundry POS mencatat berat, harga, dan status cucian dari input sampai diambil
-                pelanggan — bukan aplikasi kasir umum yang dipaksa-paskan untuk laundry.
-              </p>
-              <p className="text-base sm:text-lg text-[var(--tk-graphite-soft)] mb-8 max-w-2xl">
-                Tanpa nota tulis tangan yang gampang hilang. Tanpa hitung manual di kalkulator.
-              </p>
-
-              <div className="flex flex-wrap gap-x-8 gap-y-3 mb-9 tk-mono text-sm">
-                <div>
-                  <div className="text-[var(--tk-graphite-soft)] text-xs tracking-widest uppercase">Berat</div>
-                  <div className="font-bold text-[var(--tk-graphite)] text-lg">2.4 KG</div>
-                </div>
-                <div>
-                  <div className="text-[var(--tk-graphite-soft)] text-xs tracking-widest uppercase">Total</div>
-                  <div className="font-bold text-[var(--tk-graphite)] text-lg">Rp 24.000</div>
-                </div>
-                <div className="flex items-end">
-                  <span className="tk-stamp">Siap Diambil</span>
-                </div>
+            <div className="laundry-hero-note">
+              <MessageCircle size={17} aria-hidden="true" />
+              <span>Pesan di website. Konfirmasi bersama di WhatsApp.</span>
+            </div>
+          </div>
+          <div className="laundry-hero-visual">
+            <div className="laundry-hero-image-wrap">
+              <img
+                className="laundry-hero-image"
+                src="/images/laundry-editorial.webp"
+                alt="Ilustrasi editorial keranjang berisi handuk dan kemeja bersih yang terlipat rapi"
+                width="1024"
+                height="1024"
+                {...{ fetchpriority: "high" }}
+              />
+              <span className="laundry-image-caption">
+                Pakaian terawat. Hari terasa lebih ringan.
+              </span>
+            </div>
+            <div className="laundry-visual-caption">
+              <Shirt size={28} aria-hidden="true" />
+              <div>
+                <strong>Untuk yang Anda pakai setiap hari.</strong>
+                <span>Kiloan, satuan, dan setrika.</span>
               </div>
+            </div>
+          </div>
+        </section>
 
-              <div className="flex flex-col sm:flex-row gap-3 sm:gap-4">
-                <button
-                  onClick={() => navigate('/login?tab=signup')}
-                  className="inline-flex items-center justify-center gap-2 px-7 py-4 text-base sm:text-lg font-bold rounded-sm bg-[var(--tk-ink)] text-[var(--tk-paper)] hover:bg-[var(--tk-graphite)] transition-colors"
-                >
-                  Ambil Tiket Gratis
-                  <ArrowRight className="h-5 w-5" />
-                </button>
+        <div className="laundry-benefit-strip">
+          <div className="laundry-container">
+            <span>
+              <ClipboardList aria-hidden="true" />
+              Rincian biaya sebelum konfirmasi
+            </span>
+            <span>
+              <Clock3 aria-hidden="true" />
+              Pilihan reguler & express
+            </span>
+            <span>
+              <MessageCircle aria-hidden="true" />
+              Konsultasikan perawatan pakaian
+            </span>
+          </div>
+        </div>
+
+        <section
+          id="layanan"
+          className="laundry-section laundry-container"
+          data-reveal
+        >
+          <div className="laundry-section-heading">
+            <div>
+              <p className="laundry-eyebrow">Layanan laundry</p>
+              <h2>
+                Beda kebutuhan.
+                <br />
+                Tepat perawatannya.
+              </h2>
+            </div>
+            <p>
+              Untuk tumpukan pakaian harian, jadwal yang padat, atau pakaian
+              yang tinggal disetrika. Pilih layanan yang sesuai.
+            </p>
+          </div>
+          {laundry.isLoading && (
+            <div className="laundry-loading" role="status">
+              Sedang memuat layanan outlet...
+            </div>
+          )}
+          {laundry.isError && (
+            <div className="laundry-error" role="alert">
+              <h3>Layanan belum dapat dimuat</h3>
+              <p>Coba lagi atau tanyakan katalog langsung ke outlet.</p>
+              <button
+                className="laundry-button"
+                onClick={() => laundry.refetch()}
+                type="button"
+              >
+                Muat Ulang Layanan
+              </button>
+            </div>
+          )}
+          {!laundry.isLoading &&
+            !laundry.isError &&
+            laundry.services.length === 0 && (
+              <div className="laundry-empty">
+                <h3>Belum ada layanan yang dipublikasikan</h3>
+                <p>Tanyakan kebutuhan laundry Anda melalui WhatsApp.</p>
                 <a
-                  href="#fitur"
-                  className="inline-flex items-center justify-center gap-2 px-7 py-4 text-base sm:text-lg font-semibold rounded-sm border border-[var(--tk-ink)] text-[var(--tk-ink)] hover:bg-[rgba(35,50,74,0.05)] transition-colors"
+                  href={messageLink}
+                  className="laundry-button"
+                  target="_blank"
+                  rel="noopener noreferrer"
                 >
-                  Lihat Cara Kerja
+                  Tanya Layanan
                 </a>
               </div>
-            </div>
-          </div>
-
-          <p className="text-center mt-6 text-sm sm:text-base text-[var(--tk-graphite-soft)] tk-mono">
-            GRATIS DIPAKAI &middot; TANPA KARTU KREDIT &middot; SIAP PAKAI DALAM 5 MENIT
-          </p>
-        </div>
-      </section>
-
-      <div className="tk-perforation" />
-
-      {/* App Screenshots */}
-      <section className="py-16 sm:py-24 px-4 sm:px-6 lg:px-8">
-        <div className="max-w-7xl mx-auto">
-          <div className="text-center mb-14">
-            <span className="tk-eyebrow mb-5">Tampilan Asli</span>
-            <h2 className="text-3xl md:text-4xl font-bold text-[var(--tk-graphite)] mb-4">
-              Dari meja kasir ke genggaman tangan
-            </h2>
-            <p className="text-lg text-[var(--tk-ink-soft)] max-w-2xl mx-auto">
-              Dari ringkasan toko sampai bikin pesanan baru, semua langsung dari HP kasir.
-            </p>
-          </div>
-
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-10 items-start">
-            {/* Mobile View - dashboard */}
-            <div className="tk-stub rounded-sm">
-              <div className="tk-stub__num">No. 0021</div>
-              <div className="flex items-center gap-2 mb-5">
-                <Smartphone className="h-5 w-5 text-[var(--tk-ink)]" />
-                <h3 className="text-lg font-bold text-[var(--tk-graphite)]">Ringkasan Toko</h3>
-              </div>
-              <div className="relative bg-[var(--tk-paper-soft)] overflow-hidden border-8 border-[var(--tk-graphite)] rounded-2xl aspect-[9/19] max-h-[420px] mx-auto">
-                <img
-                  src="/screenshots/mobile-1.png"
-                  alt="Dashboard Smart Laundry POS di HP"
-                  className="w-full h-full object-cover"
-                  onError={(e) => {
-                    const target = e.target as HTMLImageElement;
-                    target.style.display = 'none';
-                    const parent = target.parentElement;
-                    if (parent) {
-                      parent.innerHTML = `
-                        <div class="flex flex-col items-center justify-center h-full text-[var(--tk-graphite-soft)] p-8">
-                          <p class="text-center text-base font-medium">Aplikasi POS Mobile</p>
-                          <p class="text-center text-sm mt-2">Kelola pesanan dari smartphone Anda</p>
-                        </div>
-                      `;
-                    }
-                  }}
-                />
-              </div>
-              <div className="mt-6 grid grid-cols-3 gap-3 text-center tk-mono">
-                <div>
-                  <Zap className="h-4 w-4 mx-auto mb-1 text-[var(--tk-ink)]" />
-                  <div className="text-xs text-[var(--tk-graphite-soft)]">Cepat</div>
-                </div>
-                <div>
-                  <Smartphone className="h-4 w-4 mx-auto mb-1 text-[var(--tk-ink)]" />
-                  <div className="text-xs text-[var(--tk-graphite-soft)]">Ramah Sentuh</div>
-                </div>
-                <div>
-                  <Wifi className="h-4 w-4 mx-auto mb-1 text-[var(--tk-ink)]" />
-                  <div className="text-xs text-[var(--tk-graphite-soft)]">Mode Offline</div>
-                </div>
-              </div>
-            </div>
-
-            {/* Mobile View - create order */}
-            <div className="tk-stub rounded-sm">
-              <div className="tk-stub__num">No. 0022</div>
-              <div className="flex items-center gap-2 mb-5">
-                <ClipboardList className="h-5 w-5 text-[var(--tk-ink)]" />
-                <h3 className="text-lg font-bold text-[var(--tk-graphite)]">Buat Pesanan</h3>
-              </div>
-              <div className="relative bg-[var(--tk-paper-soft)] overflow-hidden border-8 border-[var(--tk-graphite)] rounded-2xl aspect-[9/19] max-h-[420px] mx-auto">
-                <img
-                  src="/screenshots/mobile-2.png"
-                  alt="Layar pilih layanan saat membuat pesanan baru"
-                  className="w-full h-full object-cover"
-                  onError={(e) => {
-                    const target = e.target as HTMLImageElement;
-                    target.style.display = 'none';
-                    const parent = target.parentElement;
-                    if (parent) {
-                      parent.innerHTML = `
-                        <div class="flex flex-col items-center justify-center h-full text-[var(--tk-graphite-soft)] p-8">
-                          <p class="text-center text-lg font-medium">Buat Pesanan Baru</p>
-                          <p class="text-center text-sm mt-2">Pilih layanan langsung dari smartphone</p>
-                        </div>
-                      `;
-                    }
-                  }}
-                />
-              </div>
-              <div className="mt-6 grid grid-cols-3 gap-3 text-center tk-mono">
-                <div>
-                  <BarChart3 className="h-4 w-4 mx-auto mb-1 text-[var(--tk-ink)]" />
-                  <div className="text-xs text-[var(--tk-graphite-soft)]">Kalkulasi Otomatis</div>
-                </div>
-                <div>
-                  <Zap className="h-4 w-4 mx-auto mb-1 text-[var(--tk-ink)]" />
-                  <div className="text-xs text-[var(--tk-graphite-soft)]">Estimasi Selesai</div>
-                </div>
-                <div>
-                  <Receipt className="h-4 w-4 mx-auto mb-1 text-[var(--tk-ink)]" />
-                  <div className="text-xs text-[var(--tk-graphite-soft)]">Siap Cetak</div>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <div className="mt-14 text-center">
-            <p className="text-base text-[var(--tk-ink-soft)] mb-5">
-              Berfungsi sempurna di smartphone, tablet, dan komputer desktop
-            </p>
-            <div className="flex flex-wrap justify-center items-center gap-x-6 gap-y-2 tk-mono text-sm text-[var(--tk-graphite-soft)] uppercase tracking-wide">
-              <span>iOS &amp; Android</span>
-              <span aria-hidden="true" className="text-[var(--tk-line)]">/</span>
-              <span>Windows &amp; Mac</span>
-              <span aria-hidden="true" className="text-[var(--tk-line)]">/</span>
-              <span>Chrome · Safari · Firefox</span>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      <div className="tk-perforation" />
-
-      {/* Features */}
-      <section id="fitur" className="py-16 sm:py-24 px-4 sm:px-6 lg:px-8">
-        <div className="max-w-7xl mx-auto">
-          <div className="text-center mb-14">
-            <span className="tk-eyebrow mb-5">Isi Tiketnya</span>
-            <h2 className="text-3xl md:text-4xl font-bold text-[var(--tk-graphite)] mb-4">
-              Apa yang kamu dapat dari setiap transaksi
-            </h2>
-            <p className="text-lg text-[var(--tk-ink-soft)] max-w-2xl mx-auto">
-              Tujuh hal yang biasanya hilang di antara buku catatan dan grup WhatsApp toko.
-            </p>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 sm:gap-10">
-            {features.map((feature) => {
-              const Icon = feature.icon;
+            )}
+          <div className="laundry-services-grid">
+            {laundry.services.map((service, index) => {
+              const Icon =
+                service.category === "ironing"
+                  ? Shirt
+                  : service.duration_value <= 1 &&
+                      service.duration_unit === "days"
+                    ? Clock3
+                    : WashingMachine;
+              const price = service.supports_kilo
+                ? service.kilo_price
+                : service.unit_price;
               return (
-                <div key={feature.serial} className="tk-stub rounded-sm">
-                  <div className="tk-stub__num">No. {feature.serial}</div>
-                  <div className="w-12 h-12 rounded-full border-2 border-[var(--tk-ink)] flex items-center justify-center mb-5 text-[var(--tk-ink)]">
-                    <Icon className="h-5 w-5" />
+                <article
+                  className={`laundry-service-card service-${index % 3}`}
+                  key={service.id}
+                >
+                  <div className="laundry-service-top">
+                    <span className="laundry-service-index">0{index + 1}</span>
+                    <Icon size={34} strokeWidth={1.5} aria-hidden="true" />
                   </div>
-                  <h3 className="text-lg font-bold text-[var(--tk-graphite)] mb-2">{feature.title}</h3>
-                  <p className="text-[var(--tk-ink-soft)]">{feature.description}</p>
-                </div>
+                  <p className="laundry-service-category">
+                    {service.category === "ironing"
+                      ? "Rapikan pakaian"
+                      : service.duration_value <= 1 &&
+                          service.duration_unit === "days"
+                        ? "Untuk jadwal padat"
+                        : "Perawatan harian"}
+                  </p>
+                  <h3>{service.name}</h3>
+                  <p className="laundry-service-description">
+                    {service.description ||
+                      "Konsultasikan detail perawatan pakaian Anda dengan outlet."}
+                  </p>
+                  <div className="laundry-service-bottom">
+                    <span>
+                      <Clock3 size={15} aria-hidden="true" />
+                      {serviceDuration(service)}
+                    </span>
+                    <strong>
+                      {price == null ? "Tanya harga" : formatRupiah(price)}
+                      {price != null && (
+                        <small>
+                          {" "}
+                          / {service.supports_kilo ? "kg" : "item"}
+                        </small>
+                      )}
+                    </strong>
+                  </div>
+                  <button
+                    type="button"
+                    className="laundry-service-link"
+                    onClick={() => selectService(service.id)}
+                  >
+                    Pilih Layanan
+                    <ArrowUpRight size={18} aria-hidden="true" />
+                  </button>
+                </article>
               );
             })}
           </div>
-
-          <div className="mt-16 tk-ink-band rounded-sm p-8 sm:p-10 text-center">
-            <p className="text-xl sm:text-2xl font-bold mb-1">
-              &ldquo;Bukan sekadar aplikasi kasir — ini sistem pencatatan laundry dari ambil sampai bayar.&rdquo;
+          {laundry.usingReference && (
+            <p className="laundry-catalog-note">
+              Katalog dan harga acuan dari layanan awal. Ketersediaan serta
+              harga {laundry.name} dikonfirmasi oleh outlet.
             </p>
-          </div>
-        </div>
-      </section>
+          )}
+        </section>
 
-      <div className="tk-perforation" />
-
-      {/* Comparison ledger */}
-      <section className="py-16 sm:py-24 px-4 sm:px-6 lg:px-8">
-        <div className="max-w-7xl mx-auto">
-          <div className="text-center mb-10">
-            <span className="tk-eyebrow mb-5">Dibanding Aplikasi Kasir Umum</span>
-            <h2 className="text-3xl md:text-4xl font-bold text-[var(--tk-graphite)] mb-4">
-              Kenapa bukan aplikasi kasir biasa?
-            </h2>
-            <p className="text-lg text-[var(--tk-ink-soft)] max-w-2xl mx-auto mb-2">
-              Perbandingan jujur dengan Qasir, Pawoon, dan Majoo — tiga aplikasi kasir umum yang paling
-              sering dipakai UMKM Indonesia.
-            </p>
-            <p className="text-sm text-[var(--tk-graphite-soft)] md:hidden tk-mono">
-              Geser tabel untuk melihat lebih banyak &rarr;
-            </p>
-          </div>
-
-          <div className="tk-ledger overflow-x-auto rounded-sm -mx-4 sm:mx-0">
-            <div className="min-w-[640px] sm:min-w-0">
-              <table className="w-full text-left border-collapse">
-                <thead>
-                  <tr className="tk-ink-band tk-mono text-xs sm:text-sm uppercase tracking-wide">
-                    <th className="px-4 sm:px-6 py-4 font-semibold">Fitur</th>
-                    <th className="px-4 sm:px-6 py-4 font-semibold text-center">Smart Laundry POS</th>
-                    <th className="px-4 sm:px-6 py-4 font-semibold text-center">Qasir</th>
-                    <th className="px-4 sm:px-6 py-4 font-semibold text-center">Pawoon</th>
-                    <th className="px-4 sm:px-6 py-4 font-semibold text-center">Majoo</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {comparisonRows.map((row) => (
-                    <tr key={row.feature} className="border-b border-[var(--tk-line)] last:border-0">
-                      <td className="px-4 sm:px-6 py-4 text-sm sm:text-base font-medium text-[var(--tk-graphite)] border-r border-[var(--tk-line)]">
-                        {row.feature}
-                      </td>
-                      <td className="px-4 sm:px-6 py-4 text-center border-r border-[var(--tk-line)] bg-[rgba(46,107,76,0.05)]">
-                        <Mark value={row.smart} />
-                      </td>
-                      <td className="px-4 sm:px-6 py-4 text-center border-r border-[var(--tk-line)]">
-                        <Mark value={row.qasir} note={row.note?.qasir} />
-                      </td>
-                      <td className="px-4 sm:px-6 py-4 text-center border-r border-[var(--tk-line)]">
-                        <Mark value={row.pawoon} note={row.note?.pawoon} />
-                      </td>
-                      <td className="px-4 sm:px-6 py-4 text-center">
-                        <Mark value={row.majoo} note={row.note?.majoo} />
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </div>
-
-          <div className="mt-8 grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div className="bg-[#fffdf8] border border-[var(--tk-line)] border-l-4 border-l-[var(--tk-carbon-deep)] rounded-sm p-6">
-              <p className="font-bold text-[var(--tk-graphite)] mb-2">Aplikasi kasir umum tidak mengerti alur laundry.</p>
-              <p className="text-[var(--tk-ink-soft)]">
-                Dibuat untuk toko kelontong atau resto, lalu dipaksakan untuk mencatat berat, layanan, dan status cucian.
-              </p>
-            </div>
-            <div className="bg-[#fffdf8] border border-[var(--tk-line)] border-l-4 border-l-[var(--tk-paid)] rounded-sm p-6">
-              <p className="font-bold text-[var(--tk-graphite)] mb-2">Smart Laundry POS dibangun untuk ekosistem laundry.</p>
-              <p className="text-[var(--tk-ink-soft)]">
-                Setiap fitur mengikuti alur kerja nyata: timbang, catat, notifikasi, ambil, bayar.
-              </p>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* Emotional hook — ink band */}
-      <section className="tk-ink-band py-20 px-4 sm:px-6 lg:px-8">
-        <div className="max-w-3xl mx-auto text-center">
-          <span className="tk-eyebrow tk-eyebrow--light mb-8">Sebelum Kamu Lanjut</span>
-          <h2 className="text-3xl md:text-4xl font-bold mb-8 leading-tight">
-            Kamu sudah kerja keras bangun usaha laundry ini.
-          </h2>
-          <div className="space-y-3 text-lg sm:text-xl mb-10 opacity-90">
-            <p>Sudah keluar modal beli mesin cuci dan setrika.</p>
-            <p>Sudah latih pegawai supaya cucian rapi dan tepat waktu.</p>
-          </div>
-          <div className="border-t border-b border-dashed border-white/25 py-8 mb-10">
-            <p className="text-xl sm:text-2xl font-bold mb-3">
-              Tinggal satu hal yang belum rapi: catatannya.
-            </p>
-            <p className="text-lg text-[var(--tk-carbon)]">
-              Jangan biarkan nota tulis tangan menahan bisnis yang sudah kamu bangun susah payah.
-            </p>
-          </div>
-          <button
-            onClick={() => navigate('/login?tab=signup')}
-            className="inline-flex items-center gap-2 px-8 py-4 text-lg font-bold rounded-sm bg-[var(--tk-paper)] text-[var(--tk-ink)] hover:bg-white transition-colors"
-          >
-            Mulai Transformasi Sekarang
-            <ArrowRight className="h-5 w-5" />
-          </button>
-        </div>
-      </section>
-
-      {/* Benefits */}
-      <section className="py-16 sm:py-24 px-4 sm:px-6 lg:px-8">
-        <div className="max-w-7xl mx-auto">
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
-            <div>
-              <span className="tk-eyebrow mb-6">Solusi Lengkap</span>
-              <h2 className="text-3xl md:text-4xl font-bold text-[var(--tk-graphite)] mb-5">
-                Mengapa memilih Smart Laundry POS?
+        <section id="harga" className="laundry-pricing-section" data-reveal>
+          <div className="laundry-container laundry-pricing-layout">
+            <div className="laundry-pricing-intro">
+              <p className="laundry-eyebrow">Harga yang mudah dibaca</p>
+              <h2>
+                Hitung dulu.
+                <br />
+                Pesan kemudian.
               </h2>
-              <p className="text-lg text-[var(--tk-ink-soft)] mb-8">
-                Dibuat khusus untuk bisnis laundry Indonesia dengan metode pembayaran lokal, harga dalam
-                Rupiah, dan fitur-fitur yang penting untuk operasional harian Anda.
+              <p>
+                Lihat biaya per kilogram atau per item. Anda juga bisa
+                menghitung perkiraan total pada form pesanan.
               </p>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-x-4 gap-y-3">
-                {benefits.map((benefit) => (
-                  <div key={benefit} className="flex items-center gap-3">
-                    <span className="tk-mono text-[var(--tk-paid)] font-bold">✓</span>
-                    <span className="text-[var(--tk-graphite)]">{benefit}</span>
-                  </div>
-                ))}
-              </div>
+              <a className="laundry-text-link" href="#pesan">
+                Hitung estimasi pesanan
+                <ArrowUpRight size={17} aria-hidden="true" />
+              </a>
             </div>
-
-            <div className="tk-boarding rounded-sm p-8 sm:p-10">
-              <Smartphone className="h-10 w-10 mb-4 text-[var(--tk-carbon)]" />
-              <h3 className="text-2xl font-bold mb-2">Install sebagai Aplikasi Mobile</h3>
-              <p className="opacity-80 mb-6">
-                Dapatkan pengalaman mobile lengkap dengan dukungan offline dan akses instan dari layar utama.
-              </p>
-              <div className="space-y-3 tk-mono text-sm">
-                <div className="flex items-center gap-3">
-                  <Wifi className="h-4 w-4 flex-shrink-0" />
-                  <span>Bekerja offline saat diperlukan</span>
-                </div>
-                <div className="flex items-center gap-3">
-                  <Zap className="h-4 w-4 flex-shrink-0" />
-                  <span>Performa super cepat</span>
-                </div>
-                <div className="flex items-center gap-3">
-                  <Globe className="h-4 w-4 flex-shrink-0" />
-                  <span>Akses dari mana saja</span>
-                </div>
+            <div className="laundry-price-panel">
+              <div className="laundry-price-panel-title">
+                <strong>
+                  {laundry.usingReference
+                    ? "Daftar harga acuan"
+                    : "Daftar harga outlet"}
+                </strong>
+                <span>IDR / Rupiah</span>
               </div>
+              {laundry.services.length ? (
+                <div className="laundry-table-scroll">
+                  <table className="laundry-price-table">
+                    <caption className="sr-only">
+                      Harga layanan laundry per kilogram dan per item
+                    </caption>
+                    <thead>
+                      <tr>
+                        <th scope="col">Layanan</th>
+                        <th scope="col">Per kg</th>
+                        <th scope="col">Per item</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {laundry.services.map((service) => (
+                        <tr key={service.id}>
+                          <th scope="row">
+                            {service.name}
+                            <span>{serviceDuration(service)}</span>
+                          </th>
+                          <td>
+                            {service.supports_kilo && service.kilo_price != null
+                              ? formatRupiah(service.kilo_price)
+                              : "Tidak tersedia"}
+                          </td>
+                          <td>
+                            {service.supports_unit && service.unit_price != null
+                              ? formatRupiah(service.unit_price)
+                              : "Tidak tersedia"}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              ) : (
+                <p className="laundry-price-note">
+                  {laundry.isLoading
+                    ? "Memuat daftar harga..."
+                    : "Daftar harga belum tersedia. Hubungi outlet untuk konfirmasi."}
+                </p>
+              )}
+              <p className="laundry-price-note">
+                {laundry.usingReference
+                  ? "Harga acuan dari katalog awal, belum terverifikasi sebagai harga outlet. "
+                  : ""}
+                Total akhir berdasarkan hasil timbang atau pemeriksaan barang.
+                Biaya tambahan harus dikonfirmasi terlebih dahulu.
+              </p>
             </div>
           </div>
-        </div>
-      </section>
+        </section>
 
-      <div className="tk-perforation" />
-
-      {/* FAQ — content mirrors the FAQPage JSON-LD in index.html, keep them in sync */}
-      <section id="faq" className="py-16 sm:py-24 px-4 sm:px-6 lg:px-8">
-        <div className="max-w-4xl mx-auto">
-          <div className="text-center mb-14">
-            <span className="tk-eyebrow mb-5">Pertanyaan yang Sering Diajukan</span>
-            <h2 className="text-3xl md:text-4xl font-bold text-[var(--tk-graphite)] mb-4">
-              Yang biasanya ditanyakan pemilik laundry
-            </h2>
-            <p className="text-lg text-[var(--tk-ink-soft)] max-w-2xl mx-auto">
-              Jawaban singkat sebelum kamu memutuskan pindah dari nota tulis tangan.
+        <section
+          id="cara-kerja"
+          className="laundry-section laundry-container"
+          data-reveal
+        >
+          <div className="laundry-section-heading">
+            <div>
+              <p className="laundry-eyebrow">Cara kerja</p>
+              <h2>
+                Dari keranjang,
+                <br />
+                kembali siap dipakai.
+              </h2>
+            </div>
+            <p>
+              Empat langkah yang jelas. Mulai dari website dan sepakati
+              detailnya bersama outlet.
             </p>
           </div>
-
-          <div className="space-y-5">
-            {faqs.map((faq) => (
-              <div key={faq.question} className="tk-stub rounded-sm">
-                <h3 className="text-lg font-bold text-[var(--tk-graphite)] mb-2">{faq.question}</h3>
-                <p className="text-[var(--tk-ink-soft)]">{faq.answer}</p>
-              </div>
+          <ol className="laundry-process">
+            {processSteps.map((step, index) => (
+              <li key={step.title}>
+                <div className="laundry-process-marker">
+                  <span>0{index + 1}</span>
+                  <step.icon size={23} aria-hidden="true" />
+                </div>
+                <h3>{step.title}</h3>
+                <p>{step.description}</p>
+              </li>
             ))}
-          </div>
-        </div>
-      </section>
+          </ol>
+        </section>
 
-      {/* CTA */}
-      <section className="pb-20 sm:pb-28 px-4 sm:px-6 lg:px-8">
-        <div className="max-w-4xl mx-auto text-center bg-[#fffdf8] border border-[var(--tk-line)] rounded-sm p-8 sm:p-14">
-          <span className="tk-eyebrow mb-6">Penawaran untuk Pemilik Toko Baru</span>
-          <h2 className="text-3xl md:text-4xl font-bold text-[var(--tk-graphite)] mb-6 leading-tight">
-            Siap modernisasi bisnis laundry Anda?
-          </h2>
-          <p className="text-lg text-[var(--tk-ink-soft)] mb-10 max-w-2xl mx-auto">
-            Bergabunglah dengan bisnis laundry yang sudah menggunakan Smart Laundry POS untuk meningkatkan
-            efisiensi dan kepuasan pelanggan.
-          </p>
-
-          <div className="grid sm:grid-cols-3 gap-4 mb-10 text-left">
-            <div className="tk-stub rounded-sm !p-5">
-              <div className="tk-stub__num">A</div>
-              <p className="font-bold text-[var(--tk-graphite)] mb-1">Mulai gratis</p>
-              <p className="text-sm text-[var(--tk-graphite-soft)]">Tidak perlu kartu kredit</p>
-            </div>
-            <div className="tk-stub rounded-sm !p-5">
-              <div className="tk-stub__num">B</div>
-              <p className="font-bold text-[var(--tk-graphite)] mb-1">Set-up 5 menit</p>
-              <p className="text-sm text-[var(--tk-graphite-soft)]">Rasakan bedanya hari ini</p>
-            </div>
-            <div className="tk-stub rounded-sm !p-5">
-              <div className="tk-stub__num">C</div>
-              <p className="font-bold text-[var(--tk-graphite)] mb-1">Langsung mulai</p>
-              <p className="text-sm text-[var(--tk-graphite-soft)]">Tanpa kontrak jangka panjang</p>
-            </div>
-          </div>
-
-          <div className="tk-tear pt-8">
-            <button
-              onClick={() => navigate('/login?tab=signup')}
-              className="inline-flex items-center gap-2 px-8 sm:px-10 py-4 text-lg font-bold rounded-sm bg-[var(--tk-ink)] text-[var(--tk-paper)] hover:bg-[var(--tk-graphite)] transition-colors"
-            >
-              Ambil Tiket Gratis Sekarang
-              <ArrowRight className="h-5 w-5" />
-            </button>
-            <p className="mt-5 text-sm tk-mono uppercase tracking-wide text-[var(--tk-graphite-soft)]">
-              Tanpa biaya setup &middot; Tanpa kontrak &middot; Langsung mulai
+        <section
+          id="tentang"
+          className="laundry-container laundry-about"
+          data-reveal
+        >
+          <div className="laundry-about-copy">
+            <p className="laundry-eyebrow">Tentang {laundry.name}</p>
+            <h2>
+              Lebih sedikit
+              <br />
+              urusan cucian.
+              <br />
+              <span>
+                Lebih banyak
+                <br />
+                waktu untuk Anda.
+              </span>
+            </h2>
+            <p>
+              {laundry.description ||
+                `${laundry.name} menghadirkan cara yang sederhana untuk merencanakan perawatan pakaian. Kenali pilihan layanan, periksa perkiraan biayanya, dan bicarakan kebutuhan Anda langsung dengan outlet.`}
             </p>
+            <a className="laundry-button laundry-button-white" href="#pesan">
+              Rencanakan Laundry Anda
+            </a>
           </div>
-        </div>
-      </section>
-
-      {/* Footer */}
-      <footer className="tk-ink-band py-14 px-4 sm:px-6 lg:px-8">
-        <div className="max-w-7xl mx-auto">
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-10">
-            <div className="col-span-1 md:col-span-2">
-              <div className="flex items-center gap-3 mb-4">
-                <div className="w-9 h-9 border-2 border-[var(--tk-paper)] rounded-sm flex items-center justify-center tk-mono font-bold text-sm">
-                  SL
-                </div>
-                <span className="text-lg font-bold">Smart Laundry POS</span>
+          <div className="laundry-about-details">
+            <p className="laundry-step-label">Kenapa mulai di sini?</p>
+            <article>
+              <ClipboardList aria-hidden="true" />
+              <div>
+                <h3>Harga & detail terlihat</h3>
+                <p>
+                  Layanan, satuan harga, dan estimasi pengerjaan ditampilkan
+                  sebelum Anda mengirim permintaan.
+                </p>
               </div>
-              <p className="opacity-75 mb-6 max-w-md">
-                Sistem point of sale modern yang dirancang khusus untuk bisnis laundry. Sederhanakan
-                operasional, tingkatkan efisiensi, dan kembangkan bisnis Anda.
-              </p>
-              <div className="flex flex-col sm:flex-row gap-3 mb-6">
-                <PWAInstallButton
-                  variant="outline"
-                  className="!bg-transparent !border-white/25 !text-[var(--tk-paper)] hover:!bg-white/10"
-                />
-                <button
-                  onClick={() => navigate('/install')}
-                  className="inline-flex items-center justify-center gap-2 px-4 py-2 text-sm font-medium border border-white/25 rounded-sm hover:bg-white/10 transition-colors"
-                >
-                  <Download className="h-4 w-4" />
-                  Install Guide
-                </button>
-                <a
-                  href={ANDROID_APK_URL}
-                  className="inline-flex items-center justify-center gap-2 px-4 py-2 text-sm font-medium border border-white/25 rounded-sm hover:bg-white/10 transition-colors"
-                >
-                  <AndroidIcon className="h-4 w-4" />
-                  Download APK Android
+            </article>
+            <article>
+              <MessageCircle aria-hidden="true" />
+              <div>
+                <h3>Kebutuhan Anda tersampaikan</h3>
+                <p>
+                  Tambahkan catatan untuk pakaian khusus, pewangi, atau
+                  penanganan yang perlu dibicarakan.
+                </p>
+              </div>
+            </article>
+            <article>
+              <Check aria-hidden="true" />
+              <div>
+                <h3>Konfirmasi sebelum diproses</h3>
+                <p>
+                  Sepakati jadwal dan biaya bersama outlet. Tidak ada pembayaran
+                  otomatis dari form.
+                </p>
+              </div>
+            </article>
+            <div className="laundry-pickup-note">
+              <Truck aria-hidden="true" />
+              <div>
+                <h3>Ingin antar jemput?</h3>
+                <p>
+                  Ajukan melalui form. Outlet akan mengonfirmasi area, jadwal,
+                  dan biaya jika layanan tersedia.
+                </p>
+                <a href="#pesan">
+                  Ajukan di form pesanan
+                  <ArrowUpRight size={15} aria-hidden="true" />
                 </a>
               </div>
-              <div className="opacity-80 text-sm">
-                <p className="mb-1">
-                  <strong className="opacity-100">Kontak:</strong>{' '}
-                  <a
-                    href="mailto:fahrudinjaya@gmail.com"
-                    className="underline decoration-white/30 hover:decoration-white"
-                  >
-                    fahrudinjaya@gmail.com
-                  </a>
-                </p>
-                <p>Untuk pertanyaan, dukungan teknis, atau demo produk</p>
-              </div>
-            </div>
-
-            <div>
-              <h3 className="tk-mono text-xs uppercase tracking-widest mb-4 opacity-70">Fitur</h3>
-              <ul className="space-y-2 opacity-80 text-sm">
-                <li>Manajemen Pesanan</li>
-                <li>Database Pelanggan</li>
-                <li>Proses Pembayaran</li>
-                <li>Laporan &amp; Analitik</li>
-                <li>Dukungan Multi-toko</li>
-              </ul>
-            </div>
-
-            <div>
-              <h3 className="tk-mono text-xs uppercase tracking-widest mb-4 opacity-70">Dukungan</h3>
-              <ul className="space-y-2 opacity-80 text-sm">
-                <li>Dokumentasi</li>
-                <li>Tutorial Video</li>
-                <li>Customer Support</li>
-                <li>Request Fitur</li>
-                <li>Status Sistem</li>
-              </ul>
             </div>
           </div>
+        </section>
 
-          <div className="border-t border-white/15 mt-10 pt-8 text-center opacity-70 text-sm">
-            <p>&copy; 2025 Smart Laundry POS. Dibuat untuk bisnis laundry Indonesia.</p>
-            <p className="mt-2">
-              Kontak:{' '}
-              <a href="mailto:fahrudinjaya@gmail.com" className="underline decoration-white/30 hover:decoration-white">
-                fahrudinjaya@gmail.com
+        <section
+          id="pesan"
+          className="laundry-section laundry-container laundry-order-section"
+          data-reveal
+        >
+          <div className="laundry-order-intro">
+            <p className="laundry-eyebrow">Pesan laundry online</p>
+            <h2>
+              Keranjang penuh?
+              <br />
+              <span>Kita mulai.</span>
+            </h2>
+            <p>
+              Tak perlu menebak biayanya. Pilih layanan dan perkiraan jumlah,
+              lalu periksa rincian sebelum dikirim.
+            </p>
+            <div className="laundry-order-tip">
+              <Shirt size={35} strokeWidth={1.5} aria-hidden="true" />
+              <h3>Ada pakaian yang perlu perhatian khusus?</h3>
+              <p>
+                Cantumkan jenis bahan dan instruksi perawatan di catatan.
+                Pastikan penanganannya dikonfirmasi terlebih dahulu.
+              </p>
+            </div>
+            <p className="laundry-order-help">
+              Butuh bantuan memilih layanan?
+              <br />
+              <a href={messageLink} target="_blank" rel="noopener noreferrer">
+                Tanya melalui WhatsApp
+                <ArrowUpRight size={16} aria-hidden="true" />
               </a>
             </p>
           </div>
+          <OrderRequestForm
+            services={laundry.services}
+            selectedServiceId={selectedServiceId}
+            onServiceChange={setSelectedServiceId}
+            brand={laundry.name}
+            phone={laundry.phone}
+            usingReference={laundry.usingReference}
+          />
+        </section>
+
+        <section id="testimoni" className="laundry-review-section" data-reveal>
+          <div className="laundry-container laundry-review-inner">
+            <div>
+              <p className="laundry-eyebrow">Cerita pelanggan</p>
+              <h2>
+                Kepercayaan tumbuh
+                <br />
+                dari pengalaman nyata.
+              </h2>
+            </div>
+            <div className="laundry-review-empty">
+              <MessageCircle size={29} aria-hidden="true" />
+              <h3>Ruang untuk cerita Anda.</h3>
+              <p>
+                Ulasan pelanggan terverifikasi belum tersedia. Kami akan
+                menampilkan pengalaman nyata ketika ulasan sudah dikumpulkan.
+              </p>
+              <a
+                className="laundry-text-link"
+                href={whatsAppLink(
+                  laundry.phone,
+                  `Halo ${laundry.name}, saya ingin menyampaikan pengalaman laundry saya.`,
+                )}
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                Bagikan pengalaman di WhatsApp
+                <ArrowUpRight size={16} aria-hidden="true" />
+              </a>
+            </div>
+          </div>
+        </section>
+
+        <section
+          id="faq"
+          className="laundry-section laundry-container laundry-faq-layout"
+          data-reveal
+        >
+          <div>
+            <p className="laundry-eyebrow">Sebelum Anda memesan</p>
+            <h2>
+              Masih ada
+              <br />
+              yang ingin ditanyakan?
+            </h2>
+            <p className="laundry-faq-intro">
+              Detail kecil membuat semuanya lebih jelas. Ini yang perlu Anda
+              ketahui sebelum menyerahkan cucian.
+            </p>
+          </div>
+          <div className="laundry-faq-list">
+            {questions.map(([question, answer]) => (
+              <details key={question}>
+                <summary>
+                  {question}
+                  <ChevronDown size={19} aria-hidden="true" />
+                </summary>
+                <p>{answer}</p>
+              </details>
+            ))}
+          </div>
+        </section>
+
+        <section
+          id="kontak"
+          className="laundry-container laundry-contact-section"
+          data-reveal
+        >
+          <div>
+            <p className="laundry-eyebrow">Mari bicara</p>
+            <h2>
+              Cucian Anda,
+              <br />
+              kami bantu rencanakan.
+            </h2>
+            <p>
+              Diskusikan layanan, jadwal, dan kebutuhan pakaian Anda langsung
+              melalui WhatsApp.
+            </p>
+            <a
+              className="laundry-button"
+              href={messageLink}
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              <MessageCircle size={19} aria-hidden="true" />
+              Hubungi {laundry.name}
+            </a>
+          </div>
+          <div className="laundry-contact-details">
+            <div>
+              <MessageCircle aria-hidden="true" />
+              <span>
+                WhatsApp<strong>{laundry.phone}</strong>
+              </span>
+            </div>
+            <div>
+              <MapPin aria-hidden="true" />
+              <span>
+                Alamat outlet
+                <strong>
+                  {laundry.address || "Alamat belum dipublikasikan"}
+                </strong>
+                {laundry.address ? (
+                  <a
+                    href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(laundry.address)}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                  >
+                    Lihat di Google Maps
+                  </a>
+                ) : (
+                  <small>Konfirmasikan lokasi sebelum mengantar pakaian.</small>
+                )}
+              </span>
+            </div>
+            <div>
+              <Clock3 aria-hidden="true" />
+              <span>
+                Jam operasional
+                <strong>
+                  {laundrySite.hours || "Jam operasional belum dipublikasikan"}
+                </strong>
+              </span>
+            </div>
+            {laundry.email && (
+              <div>
+                <Mail aria-hidden="true" />
+                <span>
+                  Email<a href={`mailto:${laundry.email}`}>{laundry.email}</a>
+                </span>
+              </div>
+            )}
+          </div>
+        </section>
+      </main>
+
+      <footer className="laundry-footer">
+        <div className="laundry-container">
+          <div className="laundry-footer-main">
+            <div>
+              <a className="laundry-wordmark" href="#home">
+                <LaundryWordmark name={laundry.name} />
+              </a>
+              <p>
+                Perawatan pakaian, dimulai
+                <br />
+                dengan percakapan yang jelas.
+              </p>
+            </div>
+            <nav aria-label="Navigasi footer">
+              <a href="#layanan">Layanan</a>
+              <a href="#harga">Daftar harga</a>
+              <a href="#pesan">Pesan laundry</a>
+              <a href="#faq">FAQ</a>
+            </nav>
+            <div className="laundry-footer-contact">
+              <a href={messageLink} target="_blank" rel="noopener noreferrer">
+                WhatsApp
+                <ArrowUpRight size={16} aria-hidden="true" />
+              </a>
+              {instagram && (
+                <a href={instagram} target="_blank" rel="noopener noreferrer">
+                  Instagram
+                  <ArrowUpRight size={16} aria-hidden="true" />
+                </a>
+              )}
+              <Link to={user ? "/home" : "/login"}>
+                {user ? "Dashboard outlet" : "Masuk pengelola"}
+              </Link>
+            </div>
+          </div>
+          <div className="laundry-footer-bottom">
+            <span>
+              © {new Date().getFullYear()} {laundry.name}.
+            </span>
+            <span>Untuk pakaian Anda. Untuk waktu Anda.</span>
+            <a href="#home">Kembali ke atas ↑</a>
+          </div>
         </div>
       </footer>
-
-      {/* Sticky mobile CTA */}
-      <div className="sm:hidden fixed bottom-0 left-0 right-0 z-40 bg-[rgba(245,240,228,0.95)] backdrop-blur-sm border-t border-[var(--tk-line)] px-4 py-3 pb-[calc(0.75rem+env(safe-area-inset-bottom))]">
-        <button
-          onClick={() => navigate('/login?tab=signup')}
-          className="w-full inline-flex items-center justify-center gap-2 rounded-sm bg-[var(--tk-ink)] text-[var(--tk-paper)] py-4 text-base font-bold"
-        >
-          Ambil Tiket Gratis
-          <ArrowUpRight className="h-5 w-5" />
-        </button>
-      </div>
-
-      {/* WhatsApp Floating Button */}
-      <WhatsAppFloatingButton
-        phoneNumber="6281280272326"
-        message="Halo, saya tertarik dengan Smart Laundry POS dan ingin bertanya lebih lanjut!"
-        position="bottom-right"
-      />
+      <a
+        className="laundry-floating-whatsapp"
+        href={messageLink}
+        target="_blank"
+        rel="noopener noreferrer"
+        aria-label={`Hubungi ${laundry.name} di WhatsApp`}
+      >
+        <MessageCircle aria-hidden="true" />
+        <span>Tanya laundry</span>
+      </a>
     </div>
   );
-};
+}

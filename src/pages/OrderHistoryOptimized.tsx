@@ -1,5 +1,5 @@
-import React, { useState, useMemo, useCallback, useEffect } from 'react';
-import { Clock, Search, Eye, Filter, Calendar, AlertTriangle, Edit, X, ChevronDown, ArrowLeft, Home, RefreshCw, Printer, Download, Receipt } from 'lucide-react';
+import { useState, useMemo, useCallback, useEffect } from 'react';
+import { Clock, Search, Filter, AlertTriangle, X, ChevronDown, ArrowLeft, Home, RefreshCw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -17,7 +17,7 @@ import { ThermalPrintDialog } from '@/components/thermal/ThermalPrintDialog';
 import { VirtualizedOrderList } from '@/components/orders/VirtualizedOrderList';
 import { PaymentSummaryCards } from '@/components/orders/PaymentSummaryCards';
 import { PayLaterPaymentDialog } from '@/components/orders/PayLaterPaymentDialog';
-import { formatDate, isDateOverdue } from '@/lib/utils';
+import { isDateOverdue } from '@/lib/utils';
 import { openReceiptForView, openReceiptForPrint, generateReceiptPDFFromUrl, sanitizeFilename } from '@/lib/printUtils';
 import { usePageTitle, updatePageTitleWithCount } from '@/hooks/usePageTitle';
 import { useStore } from '@/contexts/StoreContext';
@@ -171,7 +171,7 @@ export const OrderHistory = () => {
   } = useOrders(queryFilters);
 
   const updateOrderMutation = useUpdateOrderStatusWithNotifications();
-  const { resendNotification, isResending } = useResendOrderNotification();
+  const { resendNotification } = useResendOrderNotification();
   
   // Track which order is currently being processed
   const [processingOrderId, setProcessingOrderId] = useState<string | null>(null);
@@ -285,37 +285,6 @@ export const OrderHistory = () => {
       updatePageTitleWithCount('Order History', totalCount);
     }
   }, [debouncedSearchTerm, filteredOrders.length, totalCount, hasActiveFilters]);
-
-  const getExecutionStatusColor = (status: string) => {
-    switch (status) {
-      case 'completed': return 'bg-pos-success/10 text-pos-success border border-pos-success/30';
-      case 'ready_for_pickup': return 'bg-pos-warning/10 text-pos-warning border border-pos-warning/30';
-      case 'in_progress': return 'bg-pos-highlight/30 text-primary border border-primary/20';
-      case 'in_queue': return 'bg-pos-highlight/20 text-primary border border-pos-highlight/40';
-      case 'cancelled': return 'bg-destructive/10 text-destructive border border-destructive/30';
-      default: return 'bg-muted text-muted-foreground border border-border';
-    }
-  };
-
-  const getPaymentStatusColor = (status: string) => {
-    switch (status) {
-      case 'completed': return 'bg-pos-success/10 text-pos-success border border-pos-success/30';
-      case 'down_payment': return 'bg-pos-highlight/30 text-primary border border-primary/20';
-      case 'pending': return 'bg-pos-warning/10 text-pos-warning border border-pos-warning/30';
-      case 'refunded': return 'bg-destructive/10 text-destructive border border-destructive/30';
-      default: return 'bg-muted text-muted-foreground border border-border';
-    }
-  };
-
-  const getPaymentMethodDisplay = (method: string | null) => {
-    if (!method) return '-';
-    switch (method) {
-      case 'cash': return 'Cash';
-      case 'qris': return 'QRIS';
-      case 'transfer': return 'Transfer';
-      default: return method;
-    }
-  };
 
   const isOrderOverdue = (order: Order) => {
     return order.estimated_completion && 

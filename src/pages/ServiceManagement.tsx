@@ -4,7 +4,7 @@ import { Plus, Edit2, Trash2, DollarSign, Settings, AlertCircle, ChevronRight, S
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Drawer, DrawerContent, DrawerHeader, DrawerTitle } from '@/components/ui/drawer';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -14,7 +14,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/hooks/use-toast';
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { useIsMobile } from '@/hooks/use-mobile';
-import { useServices, useCreateService, useUpdateService, useDeleteService, useSeedDefaultServices, ServiceFormData as ServiceFormType, ServiceData } from '@/hooks/useServices';
+import { useServices, useCreateService, useUpdateService, useDeleteService, useSeedDefaultServices, ServiceData } from '@/hooks/useServices';
 import { SectionLoading } from '@/components/ui/loading-spinner';
 import { MobilePageHeader } from '@/components/layout/MobilePageHeader';
 import { cn } from '@/lib/utils';

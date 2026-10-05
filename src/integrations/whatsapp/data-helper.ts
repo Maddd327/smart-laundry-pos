@@ -11,13 +11,6 @@ export class WhatsAppDataHelper {
   static async getStoreInfo(storeId?: string): Promise<StoreInfo> {
     try {
       
-      // First, try to get all stores to debug
-      const { data: allStores, error: debugError } = await supabase
-        .from('stores')
-        .select('id, name, address, phone, is_active')
-        .eq('is_active', true);
-      
-
       let query = supabase
         .from('stores')
         .select('name, address, phone, enable_qr, enable_points, wa_use_store_number, wa_sender_id')
@@ -25,7 +18,6 @@ export class WhatsAppDataHelper {
 
       if (storeId) {
         query = query.eq('id', storeId);
-      } else {
       }
 
       const { data, error } = await query.single();

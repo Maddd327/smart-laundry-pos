@@ -22,7 +22,6 @@ User-agent: CCBot
 User-agent: *
 Allow: /
 Allow: /login
-Allow: /install
 Disallow: /home
 Disallow: /pos
 Disallow: /order-history
@@ -42,4 +41,4 @@ Sitemap: https://pos.fahrudina.my.id/sitemap.xml
 
 # Contact Information
 # Email: fahrudinjaya@gmail.com
-# Smart Laundry POS - Sistem Kasir Modern untuk Laundry Indonesia
+# Laundry Mr Andy - Website Layanan Laundry
